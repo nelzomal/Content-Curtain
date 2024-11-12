@@ -24,7 +24,11 @@ export default defineContentScript({
       position: "inline",
       anchor: "body",
       onMount: (container: HTMLElement) => {
-        const root = createRoot(container);
+        const rootContainer = document.createElement("div");
+        rootContainer.id = "reader-panel-root";
+        container.appendChild(rootContainer);
+
+        const root = createRoot(rootContainer);
         root.render(
           <TooltipProvider>
             <App article={article} />
