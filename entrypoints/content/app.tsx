@@ -96,15 +96,15 @@ export const App: React.FC<AppProps> = ({ article }) => {
   }, [article.content]);
 
   return (
-    <Card className="fixed top-5 right-5 w-[400px] max-h-[90vh] z-[2147483647]">
-      <CardHeader className="pb-3">
+    <Card className="fixed top-5 right-5 w-[400px] h-[90vh] z-[2147483647] flex flex-col overflow-hidden">
+      <CardHeader className="pb-3 shrink-0">
         <CardTitle className="text-lg">{article.title || "Untitled"}</CardTitle>
         <p className="text-sm text-muted-foreground">
           Site: {article.siteName || "Unknown"} • Length: {article.length} chars
         </p>
       </CardHeader>
-      <ScrollArea className="h-full max-h-[calc(90vh-120px)]">
-        <CardContent>
+      <ScrollArea className="flex-grow overflow-auto px-6">
+        <div className="pb-6">
           {paragraphs.map((paragraph) => (
             <div key={paragraph.id} className="relative mb-6">
               <div
@@ -135,7 +135,7 @@ export const App: React.FC<AppProps> = ({ article }) => {
               ) : null}
             </div>
           ))}
-        </CardContent>
+        </div>
       </ScrollArea>
     </Card>
   );
