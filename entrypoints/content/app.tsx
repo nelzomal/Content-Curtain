@@ -6,7 +6,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { analyzeSensitivity, SensitivityAnalysis } from "./services/ai";
+import {
+  analyzeSensitivityBatch,
+  SensitivityAnalysis,
+  SensitivityAnalysisOptions,
+} from "./services/ai";
 
 interface ArticleContent {
   title: string;
@@ -30,7 +34,6 @@ export const App: React.FC<AppProps> = ({ article }) => {
   const [paragraphs, setParagraphs] = useState<ParagraphWithSensitivity[]>([]);
 
   useEffect(() => {
-    // Create a temporary div to parse HTML content
     const div = document.createElement("div");
     div.innerHTML = article.content;
 
@@ -46,47 +49,50 @@ export const App: React.FC<AppProps> = ({ article }) => {
 
     setParagraphs(initialParagraphs);
 
-    // Analyze paragraphs one by one
-    const analyzeParagraph = async (index: number) => {
-      if (index >= initialParagraphs.length) return;
+    // Analyze paragraphs in batches
+    const analyzeParagraphs = async () => {
+      // Extract text content from paragraphs
+      const textsToAnalyze = initialParagraphs
+        .map((p) => {
+          return (
+            new DOMParser()
+              .parseFromString(p.content, "text/html")
+              .body.textContent?.trim() || ""
+          );
+        })
+        .filter((text) => text.length > 0);
 
-      // Mark paragraph as analyzing
+      // Mark all paragraphs as analyzing
       setParagraphs((current) =>
-        current.map((p, i) => (i === index ? { ...p, isAnalyzing: true } : p))
+        current.map((p) => ({ ...p, isAnalyzing: true }))
       );
 
-      const p = initialParagraphs[index];
-      const text = new DOMParser()
-        .parseFromString(p.content, "text/html")
-        .body.textContent?.trim();
+      try {
+        const options: SensitivityAnalysisOptions = {
+          batchSize: 2,
+        };
 
-      if (text) {
-        try {
-          const sensitivity = await analyzeSensitivity(text);
+        const results = await analyzeSensitivityBatch(textsToAnalyze, options);
 
-          // Update paragraph with sensitivity result
-          setParagraphs((current) =>
-            current.map((p, i) =>
-              i === index ? { ...p, sensitivity, isAnalyzing: false } : p
-            )
-          );
-        } catch (error) {
-          console.error(`Error analyzing paragraph ${index}:`, error);
-          // Mark paragraph as not analyzing in case of error
-          setParagraphs((current) =>
-            current.map((p, i) =>
-              i === index ? { ...p, isAnalyzing: false } : p
-            )
-          );
-        }
+        // Update all paragraphs with their sensitivity results
+        setParagraphs((current) =>
+          current.map((p, index) => ({
+            ...p,
+            sensitivity: results[index],
+            isAnalyzing: false,
+          }))
+        );
+      } catch (error) {
+        console.error("Error analyzing paragraphs:", error);
+        // Mark all paragraphs as not analyzing in case of error
+        setParagraphs((current) =>
+          current.map((p) => ({ ...p, isAnalyzing: false }))
+        );
       }
-
-      // Analyze next paragraph
-      analyzeParagraph(index + 1);
     };
 
-    // Start analyzing from the first paragraph
-    analyzeParagraph(0);
+    // Start the batch analysis
+    analyzeParagraphs();
   }, [article.content]);
 
   return (
