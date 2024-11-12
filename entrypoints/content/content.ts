@@ -1,5 +1,5 @@
+import "@/assets/global.css";
 import { Readability } from "@mozilla/readability";
-import "./content/style.css";
 
 export default defineContentScript({
   matches: ["<all_urls>"],

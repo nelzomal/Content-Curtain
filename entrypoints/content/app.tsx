@@ -1,4 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { analyzeSensitivity, SensitivityAnalysis } from "./services/ai";
 
 interface ArticleContent {
@@ -83,35 +90,66 @@ export const App: React.FC<AppProps> = ({ article }) => {
   }, [article.content]);
 
   return (
-    <div className="reader-panel">
-      <div className="reader-title">{article.title || "Untitled"}</div>
-      <div className="reader-meta">
-        Site: {article.siteName || "Unknown"} • Length: {article.length} chars
-      </div>
-      <div className="reader-content">
-        {paragraphs.map((paragraph) => (
-          <div key={paragraph.id} className="paragraph-container">
-            <div
-              className="paragraph-content"
-              dangerouslySetInnerHTML={{ __html: paragraph.content }}
-            />
-            {paragraph.isAnalyzing ? (
-              <div className="sensitivity-loading">Analyzing...</div>
-            ) : paragraph.sensitivity ? (
+    <Card className="fixed top-5 right-5 w-[400px] max-h-[90vh] z-[2147483647]">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{article.title || "Untitled"}</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Site: {article.siteName || "Unknown"} • Length: {article.length} chars
+        </p>
+      </CardHeader>
+      <ScrollArea className="h-full max-h-[calc(90vh-120px)]">
+        <CardContent>
+          {paragraphs.map((paragraph) => (
+            <div key={paragraph.id} className="relative mb-6">
               <div
-                className={`sensitivity-indicator level-${Math.floor(
-                  paragraph.sensitivity.sensitivityLevel / 20
-                )}`}
-              >
-                Sensitivity: {paragraph.sensitivity.sensitivityLevel}%
-                <div className="sensitivity-explanation">
-                  {paragraph.sensitivity.explanation}
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: paragraph.content }}
+              />
+              {paragraph.isAnalyzing ? (
+                <div className="text-sm italic text-muted-foreground mt-1 animate-pulse">
+                  Analyzing...
                 </div>
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </div>
+              ) : paragraph.sensitivity ? (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div
+                      className={`inline-flex px-2 py-1 text-xs rounded mt-1 ${getSensitivityClass(
+                        paragraph.sensitivity.sensitivityLevel
+                      )}`}
+                    >
+                      Sensitivity: {paragraph.sensitivity.sensitivityLevel}%
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-[300px] text-sm">
+                      {paragraph.sensitivity.explanation}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+            </div>
+          ))}
+        </CardContent>
+      </ScrollArea>
+    </Card>
   );
 };
+
+// Helper function to get sensitivity classes
+function getSensitivityClass(level: number): string {
+  const baseLevel = Math.floor(level / 20);
+  switch (baseLevel) {
+    case 0:
+      return "bg-green-100 text-green-800";
+    case 1:
+      return "bg-orange-100 text-orange-800";
+    case 2:
+      return "bg-red-100 text-red-800";
+    case 3:
+      return "bg-orange-100 text-orange-800";
+    case 4:
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
