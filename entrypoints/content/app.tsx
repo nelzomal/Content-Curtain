@@ -51,7 +51,6 @@ export const App: React.FC<AppProps> = ({ article }) => {
 
     // Analyze paragraphs in batches
     const analyzeParagraphs = async () => {
-      // Extract text content from paragraphs
       const textsToAnalyze = initialParagraphs
         .map((p) => {
           return (
@@ -62,36 +61,62 @@ export const App: React.FC<AppProps> = ({ article }) => {
         })
         .filter((text) => text.length > 0);
 
-      // Mark all paragraphs as analyzing
-      setParagraphs((current) =>
-        current.map((p) => ({ ...p, isAnalyzing: true }))
-      );
+      const options: SensitivityAnalysisOptions = {
+        batchSize: 2,
+      };
 
       try {
-        const options: SensitivityAnalysisOptions = {
-          batchSize: 2,
-        };
-
-        const results = await analyzeSensitivityBatch(textsToAnalyze, options);
-
-        // Update all paragraphs with their sensitivity results
+        // Mark all paragraphs that will be analyzed
         setParagraphs((current) =>
-          current.map((p, index) => ({
+          current.map((p, idx) => ({
             ...p,
-            sensitivity: results[index],
+            isAnalyzing: idx < textsToAnalyze.length,
+          }))
+        );
+
+        // Create a map to track which paragraphs have been analyzed
+        const analyzedIndices = new Set<number>();
+
+        for await (const result of analyzeSensitivityBatch(
+          textsToAnalyze,
+          options
+        )) {
+          // Find the first unanalyzed paragraph that matches the result text
+          const index = textsToAnalyze.findIndex(
+            (text, idx) => text === result.text && !analyzedIndices.has(idx)
+          );
+
+          if (index !== -1) {
+            analyzedIndices.add(index);
+            setParagraphs((current) =>
+              current.map((p, pIndex) =>
+                pIndex === index
+                  ? {
+                      ...p,
+                      sensitivity: result,
+                      isAnalyzing: false,
+                    }
+                  : p
+              )
+            );
+          }
+        }
+
+        // Mark any remaining paragraphs as not analyzing
+        setParagraphs((current) =>
+          current.map((p) => ({
+            ...p,
             isAnalyzing: false,
           }))
         );
       } catch (error) {
         console.error("Error analyzing paragraphs:", error);
-        // Mark all paragraphs as not analyzing in case of error
         setParagraphs((current) =>
           current.map((p) => ({ ...p, isAnalyzing: false }))
         );
       }
     };
 
-    // Start the batch analysis
     analyzeParagraphs();
   }, [article.content]);
 

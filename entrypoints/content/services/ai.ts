@@ -53,25 +53,35 @@ export interface SensitivityAnalysis {
   explanation?: string;
 }
 
+export interface SensitivityAnalysisOptions {
+  batchSize?: number;
+}
+
 export async function analyzeSensitivity(
   text: string
 ): Promise<SensitivityAnalysis> {
   try {
     const session = await ensureSession();
-    const prompt = `Analyze the following text for sensitivity level. Rate it on a scale of 0-100 where:
-    0-20: Safe for all audiences
-    21-40: Mild sensitivity
-    41-60: Moderate sensitivity
-    61-80: High sensitivity
-    81-100: Extreme sensitivity
+    const prompt = `Rate the following text for adult content and violence on a scale of 0-100 where:
+    0-20: No adult content or violence
+    21-40: Mild references to adult themes or mild violence (like pushing)
+    41-60: Moderate adult content or violence (fighting, mild gore)
+    61-80: Strong adult content or graphic violence
+    81-100: Extreme adult content or extreme violence
     
-    Provide the rating and a brief explanation.
+    Provide the rating and a brief explanation focusing only on adult content and violence levels.
     
     Text to analyze: "${text}"`;
 
+    console.log("\n=== AI Request ===");
+    console.log("Prompt:", prompt);
+
     const result = await session.prompt(prompt);
 
-    // Parse the AI response - this is a simple implementation
+    console.log("\n=== AI Response ===");
+    console.log(result);
+
+    // Parse the AI response
     const match = result.match(/(\d+)/);
     const level = match ? parseInt(match[0]) : 0;
 
@@ -86,18 +96,13 @@ export async function analyzeSensitivity(
   }
 }
 
-export interface SensitivityAnalysisOptions {
-  batchSize?: number;
-}
-
-export async function analyzeSensitivityBatch(
+export async function* analyzeSensitivityBatch(
   texts: string[],
   options: SensitivityAnalysisOptions = {}
-): Promise<SensitivityAnalysis[]> {
+): AsyncGenerator<SensitivityAnalysis> {
   const { batchSize = 5 } = options;
 
   try {
-    const results: SensitivityAnalysis[] = [];
     console.log(
       `Starting analysis of ${texts.length} texts in batches of ${batchSize}`
     );
@@ -120,21 +125,27 @@ export async function analyzeSensitivityBatch(
         const startTime = Date.now();
         console.log(`[${i + index + 1}] Starting analysis...`);
 
-        // Clone the session for each request
         const sessionClone = await mainSession.clone();
 
-        const prompt = `Analyze the following text for sensitivity level. Rate it on a scale of 0-100 where:
-          0-20: Safe for all audiences
-          21-40: Mild sensitivity
-          41-60: Moderate sensitivity
-          61-80: High sensitivity
-          81-100: Extreme sensitivity
+        const prompt = `Rate the following text for adult content and violence on a scale of 0-100 where:
+          0-20: No adult content or violence
+          21-40: Mild references to adult themes or mild violence (like pushing)
+          41-60: Moderate adult content or violence (fighting, mild gore)
+          61-80: Strong adult content or graphic violence
+          81-100: Extreme adult content or extreme violence
           
-          Provide the rating and a brief explanation.
+          Provide the rating and a brief explanation focusing only on adult content and violence levels.
           
           Text to analyze: "${text}"`;
 
+        console.log(`\n=== AI Request ${i + index + 1} ===`);
+        console.log("Prompt:", prompt);
+
         const result = await sessionClone.prompt(prompt);
+
+        console.log(`\n=== AI Response ${i + index + 1} ===`);
+        console.log(result);
+
         const match = result.match(/(\d+)/);
         const level = match ? parseInt(match[0]) : 0;
 
@@ -153,16 +164,25 @@ export async function analyzeSensitivityBatch(
         };
       });
 
-      // Wait for all promises in this batch to resolve
-      const batchResults = await Promise.all(batchPromises);
+      // Process promises as they complete
+      const pendingPromises = new Set(batchPromises);
+      while (pendingPromises.size > 0) {
+        const nextPromise = Promise.race(
+          Array.from(pendingPromises).map(async (promise) => {
+            const result = await promise;
+            return { promise, result };
+          })
+        );
+        const { promise, result } = await nextPromise;
+        pendingPromises.delete(promise);
+        yield result;
+      }
+
       const batchDuration = Date.now() - batchStartTime;
       console.log(`Batch completed in ${batchDuration}ms`);
-
-      results.push(...batchResults);
     }
 
     console.log(`\nAll analysis complete. Processed ${texts.length} texts.`);
-    return results;
   } catch (error) {
     console.error("Error in analyzeSensitivityBatch:", error);
     throw error;
