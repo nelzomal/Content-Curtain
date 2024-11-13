@@ -3,13 +3,14 @@ import { createRoot } from "react-dom/client";
 import { Readability } from "@mozilla/readability";
 import { App } from "./app";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
   cssInjectionMode: "ui",
 
-  async main(ctx) {
+  async main(ctx: ContentScriptContext): Promise<any> {
     const documentClone = document.cloneNode(true) as Document;
     const reader = new Readability(documentClone);
     const article = reader.parse();

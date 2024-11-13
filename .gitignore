@@ -1,4 +1,5 @@
 .plan/* 
+.backup/*
 # Logs
 logs
 *.log
