@@ -5,6 +5,8 @@ import { App } from "./app";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
+import { normalizeText } from "./lib/utils";
+import { analyzeContentSafety } from "./lib/ai";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -17,6 +19,17 @@ export default defineContentScript({
 
     if (!article) {
       console.log("Could not extract content from this page");
+      return;
+    }
+
+    article.textContent = normalizeText(article.textContent);
+
+    const safetyAnalysis = await analyzeContentSafety(article.textContent);
+    if (safetyAnalysis.safetyLevel === "too sensitive") {
+      console.log(
+        "Content flagged as too sensitive:",
+        safetyAnalysis.explanation
+      );
       return;
     }
 
