@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { ArticleContent, ParagraphWithSensitivity } from "../types";
-import { analyzeSensitivityBatch, SensitivityAnalysisOptions } from "../lib/ai";
+import {
+  analyzeSensitivityBatch,
+  SensitivityAnalysisOptions,
+} from "../lib/ai/prompt";
 
 export function useParagraphAnalysis(article: ArticleContent) {
   const [paragraphs, setParagraphs] = useState<ParagraphWithSensitivity[]>([]);

@@ -1,10 +1,10 @@
-import { SafetyAnalysis, ContentSafetyLevel } from "./types";
+import { SafetyAnalysis, ContentSafetyLevel } from "../types";
 import {
   SYSTEM_PROMPT,
   MAX_TOKENS,
   WORD_COUNTS,
   SENSITIVITY_RATING_PROMPT,
-} from "./constant";
+} from "../constant";
 
 let aiSession: any = null;
 

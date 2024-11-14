@@ -8,6 +8,8 @@ declare const ai: AI;
 
 interface AI {
   readonly languageModel: AILanguageModelFactory;
+  readonly writer: AIWriterFactory;
+  readonly rewriter: AIRewriterFactory;
 }
 
 interface AICreateMonitor extends EventTarget {
@@ -72,3 +74,93 @@ interface AILanguageModelPromptOptions {
 }
 
 type AILanguageModelPromptRole = "system" | "user" | "assistant";
+
+// Writer interfaces and types
+interface AIWriterFactory {
+  create(options?: AIWriterCreateOptions): Promise<AIWriter>;
+  capabilities(): Promise<AIWriterCapabilities>;
+}
+
+interface AIWriter {
+  write(writingTask: string, options?: AIWriterWriteOptions): Promise<string>;
+  writeStreaming(
+    writingTask: string,
+    options?: AIWriterWriteOptions
+  ): ReadableStream;
+  readonly sharedContext: string;
+  readonly tone: AIWriterTone;
+  readonly format: AIWriterFormat;
+  readonly length: AIWriterLength;
+  destroy(): void;
+}
+
+interface AIWriterCapabilities {
+  readonly available: AICapabilityAvailability;
+  supportsTone(tone: AIWriterTone): AICapabilityAvailability;
+  supportsFormat(format: AIWriterFormat): AICapabilityAvailability;
+  supportsLength(length: AIWriterLength): AICapabilityAvailability;
+  supportsInputLanguage(languageTag: string): AICapabilityAvailability;
+}
+
+interface AIWriterCreateOptions {
+  signal?: AbortSignal;
+  monitor?: AICreateMonitorCallback;
+  sharedContext?: string;
+  tone?: AIWriterTone;
+  format?: AIWriterFormat;
+  length?: AIWriterLength;
+}
+
+interface AIWriterWriteOptions {
+  context?: string;
+  signal?: AbortSignal;
+}
+
+type AIWriterTone = "formal" | "neutral" | "casual";
+type AIWriterFormat = "plain-text" | "markdown";
+type AIWriterLength = "short" | "medium" | "long";
+
+// Rewriter interfaces and types
+interface AIRewriterFactory {
+  create(options?: AIRewriterCreateOptions): Promise<AIRewriter>;
+  capabilities(): Promise<AIRewriterCapabilities>;
+}
+
+interface AIRewriter {
+  rewrite(input: string, options?: AIRewriterRewriteOptions): Promise<string>;
+  rewriteStreaming(
+    input: string,
+    options?: AIRewriterRewriteOptions
+  ): ReadableStream;
+  readonly sharedContext: string;
+  readonly tone: AIRewriterTone;
+  readonly format: AIRewriterFormat;
+  readonly length: AIRewriterLength;
+  destroy(): void;
+}
+
+interface AIRewriterCapabilities {
+  readonly available: AICapabilityAvailability;
+  supportsTone(tone: AIRewriterTone): AICapabilityAvailability;
+  supportsFormat(format: AIRewriterFormat): AICapabilityAvailability;
+  supportsLength(length: AIRewriterLength): AICapabilityAvailability;
+  supportsInputLanguage(languageTag: string): AICapabilityAvailability;
+}
+
+interface AIRewriterCreateOptions {
+  signal?: AbortSignal;
+  monitor?: AICreateMonitorCallback;
+  sharedContext?: string;
+  tone?: AIRewriterTone;
+  format?: AIRewriterFormat;
+  length?: AIRewriterLength;
+}
+
+interface AIRewriterRewriteOptions {
+  context?: string;
+  signal?: AbortSignal;
+}
+
+type AIRewriterTone = "as-is" | "more-formal" | "more-casual";
+type AIRewriterFormat = "as-is" | "plain-text" | "markdown";
+type AIRewriterLength = "as-is" | "shorter" | "longer";
