@@ -35,10 +35,10 @@ export const Paragraph: React.FC<ParagraphProps> = ({ paragraph }) => {
           <TooltipTrigger>
             <div
               className={`inline-flex px-2 py-1 text-xs rounded mt-1 ${getSensitivityClass(
-                paragraph.sensitivity.sensitivityLevel
+                paragraph.sensitivity.safetyNumber
               )}`}
             >
-              Sensitivity: {paragraph.sensitivity.sensitivityLevel}%
+              Sensitivity: {paragraph.sensitivity.safetyNumber}%
             </div>
           </TooltipTrigger>
           <TooltipContent>

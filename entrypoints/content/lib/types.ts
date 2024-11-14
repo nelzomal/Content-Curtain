@@ -1,14 +1,16 @@
-export interface SensitivityAnalysis {
+// Content safety analysis types
+export type ContentSafetyLevel = "safe" | "too sensitive" | "OK";
+
+export interface SafetyAnalysis {
   text: string;
-  sensitivityLevel: number; // 0-10 scale
+  safetyNumber: number; // 0-10 scale
+  safetyLevel?: ContentSafetyLevel;
   explanation?: string;
 }
 
-export interface SensitivityAnalysisOptions {
+export interface SafetyAnalysisOptions {
   batchSize?: number;
 }
-
-export type ContentSafetyLevel = "safe" | "too sensitive" | "OK";
 
 export interface ContentSafetyAnalysis {
   text: string;
@@ -16,29 +18,16 @@ export interface ContentSafetyAnalysis {
   explanation?: string;
 }
 
-export interface SafetyAnalysis {
-  safetyLevel: ContentSafetyLevel;
-  explanation: string;
+export interface AnalysisResult {
+  article: Article | null;
+  safetyAnalysis?: SafetyAnalysis;
+  error?: {
+    type: "EXTRACTION_FAILED" | "ANALYSIS_FAILED";
+    message: string;
+  };
 }
 
-export interface ArticleContent {
-  title: string;
-  siteName: string;
-  length: number;
-  content: string;
-}
-
-export interface ParagraphWithSensitivity {
-  id: string;
-  content: string;
-  sensitivity?: SensitivityAnalysis;
-  isAnalyzing: boolean;
-}
-
-export interface AppProps {
-  article: ArticleContent;
-}
-
+// Article related types
 export interface Article {
   title: string;
   content: string;
@@ -51,14 +40,21 @@ export interface Article {
   lang: string;
 }
 
-export interface AnalysisResult {
-  article: Article | null;
-  safetyAnalysis?: {
-    safetyLevel: ContentSafetyLevel;
-    explanation: string;
-  };
-  error?: {
-    type: "EXTRACTION_FAILED" | "ANALYSIS_FAILED";
-    message: string;
-  };
+export interface ArticleContent {
+  title: string;
+  siteName: string;
+  length: number;
+  content: string;
+}
+
+// UI Component types
+export interface ParagraphWithSensitivity {
+  id: string;
+  content: string;
+  sensitivity?: SafetyAnalysis;
+  isAnalyzing: boolean;
+}
+
+export interface AppProps {
+  article: ArticleContent;
 }

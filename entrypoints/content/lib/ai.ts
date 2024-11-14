@@ -1,10 +1,4 @@
-import {
-  SensitivityAnalysis,
-  SensitivityAnalysisOptions,
-  ContentSafetyLevel,
-  ContentSafetyAnalysis,
-  SafetyAnalysis,
-} from "./types";
+import { SafetyAnalysis, ContentSafetyLevel } from "./types";
 import {
   SYSTEM_PROMPT,
   MAX_TOKENS,
@@ -50,7 +44,7 @@ export async function ensureSession() {
 
 export async function analyzeSensitivity(
   text: string
-): Promise<SensitivityAnalysis> {
+): Promise<SafetyAnalysis> {
   try {
     const prompt = SENSITIVITY_RATING_PROMPT.replace("{{text}}", text);
     const result = await sendMessage(prompt);
@@ -61,7 +55,7 @@ export async function analyzeSensitivity(
 
     return {
       text,
-      sensitivityLevel: level,
+      safetyNumber: level,
       explanation: result,
     };
   } catch (error) {
@@ -93,18 +87,15 @@ export async function analyzeContentSafety(
     const sensitivity = await analyzeSensitivity(text);
 
     let safetyLevel: ContentSafetyLevel;
-    if (sensitivity.sensitivityLevel <= 2) {
-      safetyLevel = "safe";
-    } else if (sensitivity.sensitivityLevel >= 7) {
-      safetyLevel = "too sensitive";
+    if (sensitivity.safetyNumber <= 2) {
+      sensitivity.safetyLevel = "safe";
+    } else if (sensitivity.safetyNumber >= 7) {
+      sensitivity.safetyLevel = "too sensitive";
     } else {
-      safetyLevel = "OK";
+      sensitivity.safetyLevel = "OK";
     }
 
-    return {
-      safetyLevel,
-      explanation: sensitivity.explanation || "No explanation provided",
-    };
+    return sensitivity;
   } catch (error) {
     console.error("Error in analyzeContentSafety:", error);
     throw error;
