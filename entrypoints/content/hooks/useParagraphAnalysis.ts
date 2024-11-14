@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { ArticleContent, ParagraphWithSensitivity } from "../types";
 import {
-  analyzeSensitivityBatch,
-  SensitivityAnalysisOptions,
-} from "../lib/ai/prompt";
+  ArticleContent,
+  ParagraphWithSensitivity,
+  SafetyAnalysisOptions,
+} from "../lib/types";
+import { analyzeContentSafetyBatch } from "../lib/ai/prompt";
 
 export function useParagraphAnalysis(article: ArticleContent) {
   const [paragraphs, setParagraphs] = useState<ParagraphWithSensitivity[]>([]);
@@ -36,7 +37,7 @@ export function useParagraphAnalysis(article: ArticleContent) {
         })
         .filter((text) => text.length > 0);
 
-      const options: SensitivityAnalysisOptions = {
+      const options: SafetyAnalysisOptions = {
         batchSize: 2,
       };
 
@@ -50,7 +51,7 @@ export function useParagraphAnalysis(article: ArticleContent) {
 
         const analyzedIndices = new Set<number>();
 
-        for await (const result of analyzeSensitivityBatch(
+        for await (const result of analyzeContentSafetyBatch(
           textsToAnalyze,
           options
         )) {

@@ -1,7 +1,7 @@
 import { Readability } from "@mozilla/readability";
-import { normalizeText } from "./utils";
-import { analyzeContentSafety } from "./ai/prompt";
-import { Article, AnalysisResult } from "./types";
+import { normalizeText } from "../utils";
+import { analyzeContentSafety } from "./prompt";
+import { Article, AnalysisResult } from "../types";
 
 export async function analyzeContent(): Promise<AnalysisResult> {
   try {

@@ -1,8 +1,8 @@
 import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
-import { analyzeContent } from "./lib/contentAnalysis";
+import { analyzeContent } from "./lib/ai/contentAnalysis";
 import { UIManager } from "./uiManager";
-import { write, writeStreaming } from "./lib/ai/write";
+import { getTextNodeByWalker, getTextBlocks } from "./lib/ui/page_parser";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -18,6 +18,11 @@ export default defineContentScript({
         "Please wait while we analyze your content..."
       );
 
+      // Get text blocks using page parser
+      const textNodeBlocks = getTextNodeByWalker();
+      const textBlocks = getTextBlocks(textNodeBlocks);
+
+      // Analyze the content
       const result = await analyzeContent();
       console.log("result: ", result);
 
@@ -37,7 +42,13 @@ export default defineContentScript({
         return;
       }
 
-      await ui.renderApp(ctx, result.article!);
+      // Add parsed blocks to the article content
+      const articleWithBlocks = {
+        ...result.article!,
+        parsedBlocks: textBlocks,
+      };
+
+      await ui.renderApp(ctx, articleWithBlocks);
     } catch (error) {
       // Make sure to hide the processing message if there's an error
       ui.hideProcessing();

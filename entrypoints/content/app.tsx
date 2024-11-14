@@ -4,5 +4,11 @@ import { useParagraphAnalysis } from "./hooks/useParagraphAnalysis";
 import { ArticleCard } from "@/entrypoints/content/components/article/ArticleCard";
 
 export const App: React.FC<AppProps> = ({ article }) => {
-  return <div></div>;
+  const paragraphs = useParagraphAnalysis(article);
+
+  return (
+    <div>
+      <ArticleCard article={article} paragraphs={paragraphs} />
+    </div>
+  );
 };

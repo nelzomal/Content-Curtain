@@ -6,7 +6,7 @@ import {
   createBlurOverlay,
   showMessage,
   removeBlurOverlay,
-} from "./lib/overlay";
+} from "./lib/ui/overlay";
 
 export class UIManager {
   private overlay: HTMLDivElement | null = null;

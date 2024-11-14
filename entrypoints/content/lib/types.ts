@@ -40,11 +40,8 @@ export interface Article {
   lang: string;
 }
 
-export interface ArticleContent {
-  title: string;
-  siteName: string;
-  length: number;
-  content: string;
+export interface ArticleContent extends Article {
+  parsedBlocks?: string[];
 }
 
 // UI Component types

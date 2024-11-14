@@ -10,7 +10,7 @@ import {
   MESSAGE_BOX_STYLES,
   SPINNER_STYLES,
   GLOBAL_STYLES,
-} from "./styles";
+} from "../styles";
 
 function injectGlobalStyles() {
   const styleEl = document.createElement("style");
