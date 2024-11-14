@@ -3,13 +3,13 @@ import { createRoot } from "react-dom/client";
 import { ContentScriptContext } from "wxt/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { App } from "./app";
-import { type Article } from "./lib/contentAnalysis";
 import {
   createBlurOverlay,
   showMessage,
   removeBlurOverlay,
 } from "./lib/overlay";
 import { createShadowRootUi } from "wxt/client";
+import { Article } from "./lib/types";
 
 declare global {
   namespace JSX {

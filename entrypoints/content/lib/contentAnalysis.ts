@@ -1,30 +1,7 @@
 import { Readability } from "@mozilla/readability";
 import { normalizeText } from "./utils";
 import { analyzeContentSafety } from "./ai";
-
-export interface Article {
-  title: string;
-  content: string;
-  textContent: string;
-  length: number;
-  excerpt: string;
-  byline: string;
-  dir: string;
-  siteName: string;
-  lang: string;
-}
-
-export interface AnalysisResult {
-  article: Article | null;
-  safetyAnalysis?: {
-    safetyLevel: "safe" | "too sensitive" | "OK";
-    explanation: string;
-  };
-  error?: {
-    type: "EXTRACTION_FAILED" | "ANALYSIS_FAILED";
-    message: string;
-  };
-}
+import { Article, AnalysisResult } from "./types";
 
 export async function analyzeContent(): Promise<AnalysisResult> {
   try {

@@ -1,3 +1,11 @@
+import {
+  SensitivityAnalysis,
+  SensitivityAnalysisOptions,
+  ContentSafetyLevel,
+  ContentSafetyAnalysis,
+  SafetyAnalysis,
+} from "./types";
+
 let aiSession: any = null;
 const SYSTEM_PROMPT = `You are a friendly, helpful AI assistant with strict content moderation standards. your main work is to rate.
 
@@ -48,16 +56,6 @@ export async function ensureSession() {
   return aiSession;
 }
 
-export interface SensitivityAnalysis {
-  text: string;
-  sensitivityLevel: number; // 0-10 scale
-  explanation?: string;
-}
-
-export interface SensitivityAnalysisOptions {
-  batchSize?: number;
-}
-
 export async function analyzeSensitivity(
   text: string
 ): Promise<SensitivityAnalysis> {
@@ -90,55 +88,20 @@ export async function analyzeSensitivity(
   }
 }
 
-export type ContentSafetyLevel = "safe" | "too sensitive" | "OK";
-
-export interface ContentSafetyAnalysis {
-  text: string;
-  safetyLevel: ContentSafetyLevel;
-  explanation?: string;
-}
-
 export async function sendMessage(message: string): Promise<string> {
   try {
     const session = await ensureSession();
-
-    // Estimate tokens including system prompt since it's part of the context
     const estimatedTokens = await session.countPromptTokens(
       SYSTEM_PROMPT + message
     );
-
-    // If estimated tokens exceed 1500, truncate the message
     const processedMessage =
       estimatedTokens > 1500 ? truncateMessage(message) : message;
 
-    const estimatedTokensAfterTruncation = await session.countPromptTokens(
-      SYSTEM_PROMPT + processedMessage
-    );
-
-    console.log("\n=== AI Request ===");
-    console.log(
-      `Estimated tokens for message: ${estimatedTokens} ${estimatedTokensAfterTruncation}`
-    );
-    console.log("Message:", processedMessage);
-
-    const result = await session.prompt(processedMessage);
-
-    console.log("\n=== AI Response ===");
-    console.log(result);
-    console.log(
-      `Token usage: ${session.tokensSoFar}/${session.maxTokens} (${session.tokensLeft} left)`
-    );
-
-    return result;
+    return await session.prompt(processedMessage);
   } catch (error) {
     console.error("Error in sendMessage:", error);
     throw error;
   }
-}
-
-interface SafetyAnalysis {
-  safetyLevel: "safe" | "too sensitive" | "OK";
-  explanation: string; // Make explanation required
 }
 
 export async function analyzeContentSafety(
@@ -147,12 +110,6 @@ export async function analyzeContentSafety(
   try {
     const sensitivity = await analyzeSensitivity(text);
 
-    console.log("\n=== Content Safety Analysis ===");
-    console.log("Raw sensitivity analysis:", sensitivity);
-    console.log("Sensitivity level:", sensitivity.sensitivityLevel);
-    console.log("Raw explanation:", sensitivity.explanation);
-
-    // Classify based on sensitivity level
     let safetyLevel: ContentSafetyLevel;
     if (sensitivity.sensitivityLevel <= 2) {
       safetyLevel = "safe";
@@ -162,16 +119,10 @@ export async function analyzeContentSafety(
       safetyLevel = "OK";
     }
 
-    const analysis = {
-      text,
+    return {
       safetyLevel,
-      explanation: sensitivity.explanation,
+      explanation: sensitivity.explanation || "No explanation provided",
     };
-
-    console.log("Final classification:", analysis);
-    console.log("===========================\n");
-
-    return analysis;
   } catch (error) {
     console.error("Error in analyzeContentSafety:", error);
     throw error;
