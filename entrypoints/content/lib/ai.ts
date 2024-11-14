@@ -50,7 +50,7 @@ export async function ensureSession() {
 
 export interface SensitivityAnalysis {
   text: string;
-  sensitivityLevel: number; // 0-100 scale
+  sensitivityLevel: number; // 0-10 scale
   explanation?: string;
 }
 
@@ -136,9 +136,14 @@ export async function sendMessage(message: string): Promise<string> {
   }
 }
 
+interface SafetyAnalysis {
+  safetyLevel: "safe" | "too sensitive" | "OK";
+  explanation: string; // Make explanation required
+}
+
 export async function analyzeContentSafety(
   text: string
-): Promise<ContentSafetyAnalysis> {
+): Promise<SafetyAnalysis> {
   try {
     const sensitivity = await analyzeSensitivity(text);
 
