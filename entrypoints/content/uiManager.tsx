@@ -1,65 +1,58 @@
-import { type ReactElement } from "react";
 import { createRoot } from "react-dom/client";
 import { ContentScriptContext } from "wxt/client";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { App } from "./app";
+import { Article } from "./lib/types";
 import {
   createBlurOverlay,
   showMessage,
   removeBlurOverlay,
 } from "./lib/overlay";
-import { createShadowRootUi } from "wxt/client";
-import { Article } from "./lib/types";
-
-declare global {
-  namespace JSX {
-    interface Element extends ReactElement {}
-  }
-}
 
 export class UIManager {
-  private blurOverlay: HTMLDivElement;
-
-  constructor() {
-    this.blurOverlay = createBlurOverlay();
-  }
+  private overlay: HTMLDivElement | null = null;
+  private messageBox: HTMLDivElement | null = null;
 
   showError(message: string): void {
-    showMessage(this.blurOverlay, {
+    this.overlay = createBlurOverlay();
+    showMessage(this.overlay, {
       title: "Error",
       message,
+      titleColor: "#e11d48",
     });
   }
 
-  showContentWarning(explanation: string): void {
-    showMessage(this.blurOverlay, {
+  showContentWarning(message: string): void {
+    this.overlay = createBlurOverlay();
+    showMessage(this.overlay, {
       title: "Content Warning",
-      message: explanation || "This content has been flagged as sensitive",
+      message,
+      titleColor: "#f59e0b",
     });
   }
 
-  async renderApp(ctx: ContentScriptContext, article: Article): Promise<void> {
-    removeBlurOverlay(this.blurOverlay);
-
-    const ui = await createShadowRootUi(ctx, {
-      name: "reader-panel",
-      position: "inline",
-      anchor: "body",
-      onMount: (container: HTMLElement) => {
-        const rootContainer = document.createElement("div");
-        rootContainer.id = "reader-panel-root";
-        container.appendChild(rootContainer);
-
-        const root = createRoot(rootContainer);
-        const element = (
-          <TooltipProvider>
-            <App article={article} />
-          </TooltipProvider>
-        );
-        root.render(element);
-      },
+  showProcessing(title: string, message: string): void {
+    this.overlay = createBlurOverlay();
+    this.messageBox = showMessage(this.overlay, {
+      title,
+      message,
+      titleColor: "#2563eb",
+      showSpinner: true,
     });
+  }
 
-    await ui.mount();
+  hideProcessing(): void {
+    if (this.overlay) {
+      removeBlurOverlay(this.overlay);
+      this.overlay = null;
+      this.messageBox = null;
+    }
+  }
+
+  async renderApp(ctx: ContentScriptContext, article: Article) {
+    const root = document.createElement("div");
+    root.id = "extension-root";
+    document.body.appendChild(root);
+
+    createRoot(root).render(<App article={article} />);
   }
 }

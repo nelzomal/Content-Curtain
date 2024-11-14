@@ -12,12 +12,18 @@ export default defineContentScript({
     const ui = new UIManager();
 
     try {
-      // console.log("result1 write: ");
-      // const result1 = await write("A draft for an inquiry...");
-      // console.log("result1: ", result1);
+      // Show loading message before starting analysis
+      ui.showProcessing(
+        "Analyzing Content",
+        "Please wait while we analyze your content..."
+      );
 
       const result = await analyzeContent();
       console.log("result: ", result);
+
+      // Remove the processing message
+      ui.hideProcessing();
+
       if (result.error) {
         ui.showError(result.error.message);
         return;
@@ -33,6 +39,8 @@ export default defineContentScript({
 
       await ui.renderApp(ctx, result.article!);
     } catch (error) {
+      // Make sure to hide the processing message if there's an error
+      ui.hideProcessing();
       ui.showError("An unexpected error occurred.");
       console.error("Error:", error);
     }
