@@ -1,12 +1,12 @@
-import { Readability } from "@mozilla/readability";
 import { normalizeText } from "../utils";
 import { analyzeContentSafety } from "./prompt";
 import { Article, AnalysisResult } from "../types";
 
-export async function analyzeContent(): Promise<AnalysisResult> {
+export async function analyzeContent(
+  content: Article | null
+): Promise<AnalysisResult> {
   try {
-    const article = await extractArticle();
-    if (!article) {
+    if (!content) {
       return {
         article: null,
         error: {
@@ -16,11 +16,11 @@ export async function analyzeContent(): Promise<AnalysisResult> {
       };
     }
 
-    article.textContent = normalizeText(article.textContent);
-    const safetyAnalysis = await analyzeContentSafety(article.textContent);
+    content.textContent = normalizeText(content.textContent);
+    const safetyAnalysis = await analyzeContentSafety(content.textContent);
 
     return {
-      article,
+      article: content,
       safetyAnalysis,
     };
   } catch (error) {
@@ -32,10 +32,4 @@ export async function analyzeContent(): Promise<AnalysisResult> {
       },
     };
   }
-}
-
-function extractArticle(): Article | null {
-  const documentClone = document.cloneNode(true) as Document;
-  const reader = new Readability(documentClone);
-  return reader.parse();
 }

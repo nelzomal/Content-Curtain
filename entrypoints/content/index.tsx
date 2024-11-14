@@ -3,6 +3,7 @@ import "@/assets/global.css";
 import { analyzeContent } from "./lib/ai/contentAnalysis";
 import { UIManager } from "./uiManager";
 import { getTextNodeByWalker, getTextBlocks } from "./lib/ui/page_parser";
+import { extractReadableContent } from "./lib/utils";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -23,20 +24,23 @@ export default defineContentScript({
       const textBlocks = getTextBlocks(textNodeBlocks);
 
       // Analyze the content
-      const result = await analyzeContent();
-      console.log("result: ", result);
+      const readableContent = await extractReadableContent();
+      const analyzedReadableContent = await analyzeContent(readableContent);
+      console.log("result: ", analyzedReadableContent);
 
       // Remove the processing message
       ui.hideProcessing();
 
-      if (result.error) {
-        ui.showError(result.error.message);
+      if (analyzedReadableContent.error) {
+        ui.showError(analyzedReadableContent.error.message);
         return;
       }
 
-      if (result.safetyAnalysis?.safetyLevel === "too sensitive") {
+      if (
+        analyzedReadableContent.safetyAnalysis?.safetyLevel === "too sensitive"
+      ) {
         ui.showContentWarning(
-          result.safetyAnalysis.explanation ||
+          analyzedReadableContent.safetyAnalysis.explanation ||
             "This content has been flagged as sensitive"
         );
         return;
@@ -44,7 +48,7 @@ export default defineContentScript({
 
       // Add parsed blocks to the article content
       const articleWithBlocks = {
-        ...result.article!,
+        ...analyzedReadableContent.article!,
         parsedBlocks: textBlocks,
       };
 
