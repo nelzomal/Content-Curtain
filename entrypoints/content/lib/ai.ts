@@ -12,6 +12,33 @@ const SYSTEM_PROMPT = `You are a friendly, helpful AI assistant with strict cont
       - If you don't know something, be honest about it
       - Always prioritize user safety and well-being`;
 
+function truncateMessage(message: string, maxTokens: number = 1500): string {
+  if (message.length <= maxTokens) return message;
+
+  // Split into words to avoid cutting words in half
+  const words = message.split(/\s+/);
+
+  // Calculate word counts for each section
+  const startWords = 400;
+  const middleWords = 200;
+  const endWords = 200;
+
+  if (words.length <= startWords + middleWords + endWords) {
+    return message;
+  }
+
+  const start = words.slice(0, startWords).join(" ");
+  const middle = words
+    .slice(
+      Math.floor(words.length / 2) - middleWords / 2,
+      Math.floor(words.length / 2) + middleWords / 2
+    )
+    .join(" ");
+  const end = words.slice(-endWords).join(" ");
+
+  return `${start}\n\n[...]\n\n${middle}\n\n[...]\n\n${end}`;
+}
+
 export async function ensureSession() {
   if (!aiSession) {
     aiSession = await ai.languageModel.create({
@@ -76,12 +103,25 @@ export async function sendMessage(message: string): Promise<string> {
     const session = await ensureSession();
 
     // Estimate tokens including system prompt since it's part of the context
-    const estimatedTokens = estimateTokens(SYSTEM_PROMPT + message);
-    console.log("\n=== AI Request ===");
-    console.log(`Estimated tokens for message: ${estimatedTokens}`);
-    console.log("Message:", message);
+    const estimatedTokens = await session.countPromptTokens(
+      SYSTEM_PROMPT + message
+    );
 
-    const result = await session.prompt(message);
+    // If estimated tokens exceed 1500, truncate the message
+    const processedMessage =
+      estimatedTokens > 1500 ? truncateMessage(message) : message;
+
+    const estimatedTokensAfterTruncation = await session.countPromptTokens(
+      SYSTEM_PROMPT + processedMessage
+    );
+
+    console.log("\n=== AI Request ===");
+    console.log(
+      `Estimated tokens for message: ${estimatedTokens} ${estimatedTokensAfterTruncation}`
+    );
+    console.log("Message:", processedMessage);
+
+    const result = await session.prompt(processedMessage);
 
     console.log("\n=== AI Response ===");
     console.log(result);
@@ -131,30 +171,4 @@ export async function analyzeContentSafety(
     console.error("Error in analyzeContentSafety:", error);
     throw error;
   }
-}
-
-export function estimateTokens(text: string): number {
-  // Simple estimation rules:
-  // - Average English word is 4-5 characters
-  // - Most GPT tokenizers treat common words as single tokens
-  // - Special characters and spaces usually count as separate tokens
-  // - Numbers and punctuation often get their own tokens
-
-  if (!text) return 0;
-
-  // Count words (splitting on whitespace)
-  const words = text.trim().split(/\s+/).length;
-
-  // Count numbers and special characters
-  const numbers = (text.match(/\d+/g) || []).length;
-  const specialChars = (text.match(/[^a-zA-Z0-9\s]/g) || []).length;
-
-  // Estimate total tokens:
-  // - Each word is roughly 1 token
-  // - Numbers often split into multiple tokens
-  // - Special characters usually get their own tokens
-  const estimatedTokens = words + numbers + specialChars;
-
-  // Add a small buffer for safety
-  return Math.ceil(estimatedTokens * 1.2);
 }
