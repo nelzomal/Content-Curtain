@@ -52,6 +52,8 @@ export interface ParagraphWithSensitivity {
   isAnalyzing: boolean;
 }
 
-export interface AppProps {
-  article: ArticleContent;
+export interface TextBlock {
+  text: string;
+  index: number;
+  nodes?: Node[];
 }

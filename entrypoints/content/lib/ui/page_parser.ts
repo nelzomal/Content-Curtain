@@ -1,3 +1,5 @@
+import { TextBlock } from "../types";
+
 const BLOCK_TAGS = new Set([
   "div",
   "p",
@@ -205,7 +207,9 @@ function filterByTextContent(node: Node): boolean {
  * @param filters Array of filter functions to exclude certain nodes
  * @returns Array of text node groups, where each group represents a block of content
  */
-export function getTextNodeByWalker(filters: NodeFilter[] = []): Node[][] {
+export function getVisibleTextNodeByWalker(
+  filters: NodeFilter[] = []
+): Node[][] {
   // Combine all default filters
   const defaultFilters = [
     (node: Node) => !isNodeVisible(node),
@@ -257,23 +261,19 @@ export function getTextNodeByWalker(filters: NodeFilter[] = []): Node[][] {
   if (inlineBlock.length > 0) {
     textNodeBlocks.push(inlineBlock);
   }
-
-  // console log textNodeBlocks in human readablable format
-  for (let block of textNodeBlocks) {
-    console.log("Block:_______________________");
-    block.forEach((node) => {
-      console.log("Node: ", node.textContent);
-    });
-  }
   return textNodeBlocks;
 }
 
-export function getTextBlocks(blocks: Node[][]): string[] {
-  return blocks.map((block) => {
-    return block
-      .map((node) => node.textContent)
-      .join(" ")
-      .trim()
-      .replace(/\s+/g, " "); // Replace multiple spaces with a single space
+export function getVisbileTextBlocks(blocks: Node[][]): TextBlock[] {
+  return blocks.map((block, index) => {
+    return {
+      text: block
+        .map((node) => node.textContent)
+        .join(" ")
+        .trim()
+        .replace(/\s+/g, " "),
+      index: index,
+      nodes: block,
+    };
   });
 }

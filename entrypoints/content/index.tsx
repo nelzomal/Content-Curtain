@@ -2,7 +2,10 @@ import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
 import { analyzeContent } from "./lib/ai/contentAnalysis";
 import { UIManager } from "./uiManager";
-import { getTextNodeByWalker, getTextBlocks } from "./lib/ui/page_parser";
+import {
+  getVisibleTextNodeByWalker,
+  getVisbileTextBlocks,
+} from "./lib/ui/page_parser";
 import { extractReadableContent } from "./lib/utils";
 
 export default defineContentScript({
@@ -20,8 +23,10 @@ export default defineContentScript({
       );
 
       // Get text blocks using page parser
-      const textNodeBlocks = getTextNodeByWalker();
-      const textBlocks = getTextBlocks(textNodeBlocks);
+      const textNodeBlocks = getVisibleTextNodeByWalker();
+      const textBlocks = getVisbileTextBlocks(textNodeBlocks);
+
+      console.log("textBlocks: ", textBlocks);
 
       // Analyze the content
       const readableContent = await extractReadableContent();
@@ -46,13 +51,7 @@ export default defineContentScript({
         return;
       }
 
-      // Add parsed blocks to the article content
-      const articleWithBlocks = {
-        ...analyzedReadableContent.article!,
-        parsedBlocks: textBlocks,
-      };
-
-      await ui.renderApp(ctx, articleWithBlocks);
+      await ui.renderApp(ctx, textBlocks);
     } catch (error) {
       // Make sure to hide the processing message if there's an error
       ui.hideProcessing();

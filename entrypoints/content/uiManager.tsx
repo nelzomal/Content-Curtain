@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import { ContentScriptContext } from "wxt/client";
 import { App } from "./app";
-import { Article } from "./lib/types";
+import { Article, TextBlock } from "./lib/types";
 import {
   createBlurOverlay,
   showMessage,
@@ -48,11 +48,11 @@ export class UIManager {
     }
   }
 
-  async renderApp(ctx: ContentScriptContext, article: Article) {
+  async renderApp(ctx: ContentScriptContext, textBlocks: TextBlock[]) {
     const root = document.createElement("div");
     root.id = "extension-root";
     document.body.appendChild(root);
 
-    createRoot(root).render(<App article={article} />);
+    createRoot(root).render(<App textBlocks={textBlocks} />);
   }
 }
