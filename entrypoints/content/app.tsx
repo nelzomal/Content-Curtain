@@ -1,48 +1,80 @@
-import React, { useEffect } from "react";
-import { TextBlock } from "./lib/types";
+import React, { useEffect, useState } from "react";
+import { TextBlock, SafetyAnalysis } from "./lib/types";
+import { analyzeContentSafety } from "./lib/ai/prompt";
 
 interface AppProps {
   textBlocks: TextBlock[];
 }
 
 export const App: React.FC<AppProps> = ({ textBlocks }) => {
-  useEffect(() => {
-    // Apply blur effect to long text blocks
-    textBlocks.forEach((block) => {
-      if (block.text.length > 100 && block.nodes) {
-        console.log("block.text longer than 100: ", block.text);
-        block.nodes.forEach((node) => {
-          if (node.parentElement) {
-            node.parentElement.style.filter = "blur(4px)";
-            // Add transition for smooth effect
-            node.parentElement.style.transition = "filter 0.3s ease";
-          }
-        });
-      } else {
-        console.log("block.text less than 100: ", block.text);
+  const [analyzedBlocks, setAnalyzedBlocks] = useState<
+    Map<number, SafetyAnalysis>
+  >(new Map());
+
+  const toggleBlur = (block: TextBlock, shouldBlur: boolean) => {
+    block.nodes?.forEach((node) => {
+      if (node.parentElement) {
+        node.parentElement.style.filter = shouldBlur ? "blur(4px)" : "";
+        node.parentElement.style.transition = shouldBlur
+          ? "filter 0.3s ease"
+          : "";
       }
     });
+  };
 
-    // Cleanup function to remove blur when component unmounts
-    return () => {
-      textBlocks.forEach((block) => {
-        if (block.nodes) {
-          block.nodes.forEach((node) => {
-            if (node.parentElement) {
-              node.parentElement.style.filter = "";
-              node.parentElement.style.transition = "";
-            }
-          });
+  const analyzeSingleBlock = async (block: TextBlock) => {
+    try {
+      const analysis = await analyzeContentSafety(block.text);
+      setAnalyzedBlocks((prev) => new Map(prev).set(block.index, analysis));
+
+      if (analysis.safetyLevel !== "too sensitive") {
+        toggleBlur(block, false);
+      }
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const longBlocks = textBlocks.filter((block) => block.text.length > 100);
+
+    // Initially blur all long blocks
+    longBlocks.forEach((block) => toggleBlur(block, true));
+
+    const parallelism = 8;
+    const analyzeBlocks = async () => {
+      const pending = [...longBlocks];
+      const inProgress = new Set<Promise<void>>();
+
+      while (pending.length > 0 || inProgress.size > 0) {
+        // Fill up to parallelism limit
+        while (inProgress.size < parallelism && pending.length > 0) {
+          const block = pending.shift()!;
+          const promise = analyzeSingleBlock(block)
+            .catch(() => {
+              pending.push(block);
+            })
+            .finally(() => {
+              inProgress.delete(promise);
+            });
+
+          inProgress.add(promise);
         }
-      });
+
+        // Wait for at least one promise to complete before next iteration
+        if (inProgress.size > 0) {
+          await Promise.race(inProgress);
+        }
+      }
+    };
+
+    analyzeBlocks().catch(console.error);
+
+    // Cleanup
+    return () => {
+      textBlocks.forEach((block) => toggleBlur(block, false));
     };
   }, [textBlocks]);
 
-  return (
-    <div>
-      {/* {textBlocks.map((block) => (
-        <div key={block.index}>{block.text}</div>
-      ))} */}
-    </div>
-  );
+  return <div></div>;
 };

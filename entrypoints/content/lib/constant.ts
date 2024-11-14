@@ -21,7 +21,7 @@ export const WORD_COUNTS = {
 };
 
 // AI Prompts
-export const SENSITIVITY_RATING_PROMPT = `Rate the following text for adult content and violence on a scale of 0-10 where:
+export const SAFETY_LEVEL_PROMPT = `Rate the following text for adult content and violence on a scale of 0-10 where:
       1-2: No adult content or violence
       2-4: Mild references to adult themes or mild violence (like pushing)
       4-6: Moderate adult content or violence (fighting, mild gore)

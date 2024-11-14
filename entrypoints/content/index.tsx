@@ -1,6 +1,6 @@
 import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
-import { analyzeContent } from "./lib/ai/contentAnalysis";
+import { analyzeContentSafety, destroySession } from "./lib/ai/prompt";
 import { UIManager } from "./uiManager";
 import {
   getVisibleTextNodeByWalker,
@@ -30,22 +30,24 @@ export default defineContentScript({
 
       // Analyze the content
       const readableContent = await extractReadableContent();
-      const analyzedReadableContent = await analyzeContent(readableContent);
-      console.log("result: ", analyzedReadableContent);
+      if (!readableContent) {
+        ui.hideProcessing();
+        ui.showError("Could not extract content from this page");
+        return;
+      }
+
+      const safetyAnalysis = await analyzeContentSafety(
+        readableContent.textContent
+      );
+      await destroySession();
+      // console.log("safetyAnalysis: ", safetyAnalysis);
 
       // Remove the processing message
       ui.hideProcessing();
 
-      if (analyzedReadableContent.error) {
-        ui.showError(analyzedReadableContent.error.message);
-        return;
-      }
-
-      if (
-        analyzedReadableContent.safetyAnalysis?.safetyLevel === "too sensitive"
-      ) {
+      if (safetyAnalysis.safetyLevel === "too sensitive") {
         ui.showContentWarning(
-          analyzedReadableContent.safetyAnalysis.explanation ||
+          safetyAnalysis.explanation ||
             "This content has been flagged as sensitive"
         );
         return;
