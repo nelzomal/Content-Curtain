@@ -4,24 +4,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ParagraphWithSensitivity } from "@/entrypoints/content/types";
+import { ParagraphWithSensitivity } from "@/entrypoints/content/lib/types";
+import { SENSITIVITY_CLASSES } from "../../lib/styles";
 
 interface ParagraphProps {
   paragraph: ParagraphWithSensitivity;
 }
 
 export function getSensitivityClass(level: number): string {
-  const classes = {
-    0: "bg-green-100 text-green-800",
-    1: "bg-orange-100 text-orange-800",
-    2: "bg-red-100 text-red-800",
-    3: "bg-orange-100 text-orange-800",
-    4: "bg-red-100 text-red-800",
-  };
-
   const baseLevel = Math.floor(level / 20);
   return (
-    classes[baseLevel as keyof typeof classes] || "bg-gray-100 text-gray-800"
+    SENSITIVITY_CLASSES[baseLevel as keyof typeof SENSITIVITY_CLASSES] ||
+    "bg-gray-100 text-gray-800"
   );
 }
 

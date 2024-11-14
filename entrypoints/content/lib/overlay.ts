@@ -4,22 +4,11 @@ interface MessageBoxOptions {
   titleColor?: string;
 }
 
+import { BLUR_OVERLAY_STYLES, MESSAGE_BOX_STYLES } from "./styles";
+
 export function createBlurOverlay(): HTMLDivElement {
   const blurOverlay = document.createElement("div");
-  blurOverlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.5);
-    z-index: 2147483647;
-    transition: opacity 0.3s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  `;
+  blurOverlay.style.cssText = BLUR_OVERLAY_STYLES;
   document.body.appendChild(blurOverlay);
   return blurOverlay;
 }
@@ -29,14 +18,7 @@ export function showMessage(
   options: MessageBoxOptions
 ): void {
   const messageBox = document.createElement("div");
-  messageBox.style.cssText = `
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 80%;
-    text-align: center;
-  `;
+  messageBox.style.cssText = MESSAGE_BOX_STYLES;
   messageBox.innerHTML = `
     <h2 style="color: ${
       options.titleColor || "#e11d48"
