@@ -5,6 +5,12 @@ interface MessageBoxOptions {
   showSpinner?: boolean;
 }
 
+interface ToastOptions {
+  message: string;
+  duration?: number;
+  type?: "success" | "warning" | "error";
+}
+
 import {
   BLUR_OVERLAY_STYLES,
   MESSAGE_BOX_STYLES,
@@ -71,4 +77,58 @@ export function removeBlurOverlay(
 
   overlay.style.opacity = "0";
   setTimeout(() => overlay.remove(), immediate ? 0 : 300);
+}
+
+export function showToast(options: ToastOptions): HTMLDivElement {
+  const toast = document.createElement("div");
+
+  // Define colors based on type
+  const colors = {
+    success: {
+      bg: "#10b981", // green
+      text: "#ffffff",
+    },
+    warning: {
+      bg: "#fbbf24", // yellow
+      text: "#1f2937",
+    },
+    error: {
+      bg: "#ef4444", // red
+      text: "#ffffff",
+    },
+  };
+
+  const { bg, text } = colors[options.type || "success"];
+
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: ${bg};
+    color: ${text};
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    z-index: 999999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    font-weight: 500;
+  `;
+
+  toast.textContent = options.message;
+  document.body.appendChild(toast);
+
+  // Fade in
+  requestAnimationFrame(() => {
+    toast.style.opacity = "1";
+  });
+
+  // Auto remove after duration
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 300);
+  }, options.duration || 3000);
+
+  return toast;
 }

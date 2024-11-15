@@ -48,11 +48,20 @@ export class UIManager {
     }
   }
 
-  async renderApp(ctx: ContentScriptContext, textBlocks: TextBlock[]) {
+  async renderApp(
+    ctx: ContentScriptContext,
+    textBlocks: TextBlock[],
+    performBlockAnalysis: boolean
+  ) {
     const root = document.createElement("div");
     root.id = "extension-root";
     document.body.appendChild(root);
 
-    createRoot(root).render(<App textBlocks={textBlocks} />);
+    createRoot(root).render(
+      <App
+        textBlocks={textBlocks}
+        performBlockAnalysis={performBlockAnalysis}
+      />
+    );
   }
 }

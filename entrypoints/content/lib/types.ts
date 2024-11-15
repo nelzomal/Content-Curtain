@@ -1,5 +1,5 @@
 // Content safety analysis types
-export type ContentSafetyLevel = "safe" | "too sensitive" | "OK";
+export type ContentSafetyLevel = "safe" | "too sensitive" | "moderate";
 
 export interface SafetyAnalysis {
   text: string;
@@ -45,13 +45,6 @@ export interface ArticleContent extends Article {
 }
 
 // UI Component types
-export interface ParagraphWithSensitivity {
-  id: string;
-  content: string;
-  sensitivity?: SafetyAnalysis;
-  isAnalyzing: boolean;
-}
-
 export interface TextBlock {
   text: string;
   index: number;

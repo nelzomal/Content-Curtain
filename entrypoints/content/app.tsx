@@ -4,9 +4,13 @@ import { analyzeContentSafety } from "./lib/ai/prompt";
 
 interface AppProps {
   textBlocks: TextBlock[];
+  performBlockAnalysis: boolean;
 }
 
-export const App: React.FC<AppProps> = ({ textBlocks }) => {
+export const App: React.FC<AppProps> = ({
+  textBlocks,
+  performBlockAnalysis,
+}) => {
   const [analyzedBlocks, setAnalyzedBlocks] = useState<
     Map<number, SafetyAnalysis>
   >(new Map());
@@ -36,6 +40,10 @@ export const App: React.FC<AppProps> = ({ textBlocks }) => {
   };
 
   useEffect(() => {
+    if (!performBlockAnalysis) {
+      return;
+    }
+
     const longBlocks = textBlocks.filter((block) => block.text.length > 100);
 
     // Initially blur all long blocks
@@ -47,7 +55,6 @@ export const App: React.FC<AppProps> = ({ textBlocks }) => {
       const inProgress = new Set<Promise<void>>();
 
       while (pending.length > 0 || inProgress.size > 0) {
-        // Fill up to parallelism limit
         while (inProgress.size < parallelism && pending.length > 0) {
           const block = pending.shift()!;
           const promise = analyzeSingleBlock(block)
@@ -61,7 +68,6 @@ export const App: React.FC<AppProps> = ({ textBlocks }) => {
           inProgress.add(promise);
         }
 
-        // Wait for at least one promise to complete before next iteration
         if (inProgress.size > 0) {
           await Promise.race(inProgress);
         }
@@ -70,11 +76,10 @@ export const App: React.FC<AppProps> = ({ textBlocks }) => {
 
     analyzeBlocks().catch(console.error);
 
-    // Cleanup
     return () => {
       textBlocks.forEach((block) => toggleBlur(block, false));
     };
-  }, [textBlocks]);
+  }, [textBlocks, performBlockAnalysis]);
 
   return <div></div>;
 };

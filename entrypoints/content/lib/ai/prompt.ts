@@ -108,7 +108,7 @@ export async function analyzeContentSafety(
     } else if (safetyNumber >= 7) {
       safetyLevel = "too sensitive";
     } else {
-      safetyLevel = "OK";
+      safetyLevel = "moderate";
     }
 
     if (safetyLevel !== "safe") {

@@ -7,6 +7,7 @@ import {
   getVisbileTextBlocks,
 } from "./lib/ui/page_parser";
 import { extractReadableContent } from "./lib/utils";
+import { showToast } from "./lib/ui/overlay";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -16,20 +17,15 @@ export default defineContentScript({
     const ui = new UIManager();
 
     try {
-      // Show loading message before starting analysis
       ui.showProcessing(
         "Analyzing Content",
         "Please wait while we analyze your content..."
       );
 
-      // Get text blocks using page parser
       const textNodeBlocks = getVisibleTextNodeByWalker();
       const textBlocks = getVisbileTextBlocks(textNodeBlocks);
-
-      console.log("textBlocks: ", textBlocks);
-
-      // Analyze the content
       const readableContent = await extractReadableContent();
+
       if (!readableContent) {
         ui.hideProcessing();
         ui.showError("Could not extract content from this page");
@@ -40,22 +36,38 @@ export default defineContentScript({
         readableContent.textContent
       );
       await destroySession();
-      // console.log("safetyAnalysis: ", safetyAnalysis);
 
-      // Remove the processing message
       ui.hideProcessing();
 
-      if (safetyAnalysis.safetyLevel === "too sensitive") {
-        ui.showContentWarning(
-          safetyAnalysis.explanation ||
-            "This content has been flagged as sensitive"
-        );
-        return;
-      }
+      switch (safetyAnalysis.safetyLevel) {
+        case "safe":
+          showToast({
+            message: "✓ Content is safe",
+            type: "success",
+          });
+          await ui.renderApp(ctx, textBlocks, false);
+          break;
 
-      await ui.renderApp(ctx, textBlocks);
+        case "moderate":
+          showToast({
+            message: "⚠️ Content contains moderate material",
+            type: "warning",
+          });
+          await ui.renderApp(ctx, textBlocks, true);
+          break;
+
+        case "too sensitive":
+          showToast({
+            message: "⛔ Content is sensitive",
+            type: "error",
+          });
+          ui.showContentWarning(
+            safetyAnalysis.explanation ||
+              "This content has been flagged as sensitive"
+          );
+          return;
+      }
     } catch (error) {
-      // Make sure to hide the processing message if there's an error
       ui.hideProcessing();
       ui.showError("An unexpected error occurred.");
       console.error("Error:", error);
