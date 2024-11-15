@@ -132,3 +132,34 @@ export function showToast(options: ToastOptions): HTMLDivElement {
 
   return toast;
 }
+
+export const createTooltip = (content: string): HTMLDivElement => {
+  const tooltip = document.createElement("div");
+  tooltip.className = "tooltip";
+
+  const formattedContent = content
+    .replace(/\n+/g, "\n")
+    .replace(/Rating:/, "Rating: ")
+    .trim();
+
+  tooltip.textContent = formattedContent;
+
+  tooltip.style.position = "fixed";
+  tooltip.style.display = "none";
+  tooltip.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
+  tooltip.style.color = "white";
+  tooltip.style.padding = "12px 16px";
+  tooltip.style.borderRadius = "6px";
+  tooltip.style.fontSize = "14px";
+  tooltip.style.lineHeight = "1.4";
+  tooltip.style.maxWidth = "300px";
+  tooltip.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.25)";
+  tooltip.style.zIndex = "999999";
+  tooltip.style.pointerEvents = "none";
+  tooltip.style.whiteSpace = "pre-wrap";
+  tooltip.style.fontFamily =
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+  document.body.appendChild(tooltip);
+  return tooltip;
+};
