@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { TextBlock, SafetyAnalysis } from "../types";
 import { analyzeContentSafety } from "../ai/prompt";
-import { createTooltip } from "./overlay";
+import { createTooltip, showAnalysisToast } from "./overlay";
+import React from "react";
 
 export const useTooltip = () => {
   const showExplanationTooltip = useCallback(
@@ -82,10 +83,7 @@ export const useContentAnalysis = (
   textBlocks: TextBlock[],
   performBlockAnalysis: boolean
 ) => {
-  const [analyzedBlocks, setAnalyzedBlocks] = useState<
-    Map<number, SafetyAnalysis>
-  >(new Map());
-
+  const toastRef = React.useRef<HTMLDivElement | null>(null);
   const { showExplanationTooltip } = useTooltip();
   const { toggleBlur } = useBlur();
 
@@ -94,12 +92,6 @@ export const useContentAnalysis = (
       try {
         const analysis = await analyzeContentSafety(block.text);
 
-        setAnalyzedBlocks((prev) => {
-          const newMap = new Map(prev);
-          newMap.set(block.index, analysis);
-          return newMap;
-        });
-        console.log(analysis);
         if (analysis.safetyLevel === "too sensitive") {
           showExplanationTooltip(block, analysis);
         } else {
@@ -109,7 +101,7 @@ export const useContentAnalysis = (
         throw error;
       }
     },
-    [showExplanationTooltip]
+    [showExplanationTooltip, toggleBlur]
   );
 
   useEffect(() => {
@@ -118,9 +110,11 @@ export const useContentAnalysis = (
     }
 
     const longBlocks = textBlocks.filter((block) => block.text.length > 100);
-
-    // Initially blur all long blocks
     longBlocks.forEach((block) => toggleBlur(block, true));
+
+    const total = longBlocks.length;
+    let completed = 0;
+    toastRef.current = showAnalysisToast(total);
 
     const parallelism = 8;
     const analyzeBlocks = async () => {
@@ -135,6 +129,18 @@ export const useContentAnalysis = (
               pending.push(block);
             })
             .finally(() => {
+              completed++;
+              if (toastRef.current) {
+                toastRef.current.textContent = `Analyzing paragraph safety levels... (${completed}/${total})`;
+              }
+              if (completed === total) {
+                setTimeout(() => {
+                  if (toastRef.current) {
+                    toastRef.current.style.opacity = "0";
+                    setTimeout(() => toastRef.current?.remove(), 300);
+                  }
+                }, 1000);
+              }
               inProgress.delete(promise);
             });
 
@@ -150,9 +156,7 @@ export const useContentAnalysis = (
     analyzeBlocks().catch(console.error);
 
     return () => {
-      textBlocks.forEach((block) => toggleBlur(block, false));
+      longBlocks.forEach((block) => toggleBlur(block, false));
     };
   }, [textBlocks, performBlockAnalysis, analyzeSingleBlock, toggleBlur]);
-
-  return { analyzedBlocks };
 };

@@ -12,6 +12,6 @@ export const App: React.FC<AppProps> = ({
   performBlockAnalysis,
 }) => {
   useContentAnalysis(textBlocks, performBlockAnalysis);
-  
+
   return <div></div>;
 };

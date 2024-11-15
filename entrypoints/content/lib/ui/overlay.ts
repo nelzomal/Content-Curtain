@@ -11,6 +11,16 @@ interface ToastOptions {
   type?: "success" | "warning" | "error";
 }
 
+interface ToastPosition {
+  top: number;
+  id: number;
+}
+
+let activeToasts: ToastPosition[] = [];
+let nextToastId = 0;
+const TOAST_HEIGHT = 60; // Height of toast + margin
+const INITIAL_TOP = 20; // Initial top position
+
 import {
   BLUR_OVERLAY_STYLES,
   MESSAGE_BOX_STYLES,
@@ -81,6 +91,11 @@ export function removeBlurOverlay(
 
 export function showToast(options: ToastOptions): HTMLDivElement {
   const toast = document.createElement("div");
+  const toastId = nextToastId++;
+
+  // Calculate position based on existing toasts
+  const position = INITIAL_TOP + activeToasts.length * TOAST_HEIGHT;
+  activeToasts.push({ top: position, id: toastId });
 
   // Define colors based on type
   const colors = {
@@ -102,7 +117,7 @@ export function showToast(options: ToastOptions): HTMLDivElement {
 
   toast.style.cssText = `
     position: fixed;
-    top: 20px;
+    top: ${position}px;
     right: 20px;
     background-color: ${bg};
     color: ${text};
@@ -111,7 +126,7 @@ export function showToast(options: ToastOptions): HTMLDivElement {
     font-size: 14px;
     z-index: 999999;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     font-weight: 500;
   `;
@@ -127,8 +142,36 @@ export function showToast(options: ToastOptions): HTMLDivElement {
   // Auto remove after duration
   setTimeout(() => {
     toast.style.opacity = "0";
+
+    // Remove this toast from active toasts
+    activeToasts = activeToasts.filter((t) => t.id !== toastId);
+
+    // Adjust positions of remaining toasts
+    activeToasts.forEach((t, index) => {
+      const newTop = INITIAL_TOP + index * TOAST_HEIGHT;
+      t.top = newTop;
+      const toastElement = document.querySelector(`[data-toast-id="${t.id}"]`);
+      if (toastElement) {
+        (toastElement as HTMLElement).style.top = `${newTop}px`;
+      }
+    });
+
     setTimeout(() => toast.remove(), 300);
   }, options.duration || 3000);
+
+  // Add identifier to toast
+  toast.setAttribute("data-toast-id", toastId.toString());
+
+  return toast;
+}
+
+export function showAnalysisToast(totalBlocks: number): HTMLDivElement {
+  const toast = showToast({
+    message: `Analyzing paragraph safety levels... (0/${totalBlocks})`,
+    type: "success",
+    // Set a very long duration that will be cleared when analysis completes
+    duration: 1000000,
+  });
 
   return toast;
 }

@@ -24,7 +24,7 @@ export default defineContentScript({
 
       const textNodeBlocks = getVisibleTextNodeByWalker();
       const textBlocks = getVisbileTextBlocks(textNodeBlocks);
-      const readableContent = await extractReadableContent();
+      const readableContent = extractReadableContent();
 
       if (!readableContent) {
         ui.hideProcessing();
@@ -39,28 +39,33 @@ export default defineContentScript({
 
       ui.hideProcessing();
 
+      const resultToast = {
+        safe: {
+          message: "✓ Content is safe",
+          type: "success" as const,
+        },
+        moderate: {
+          message: "⚠️ Content contains moderate material",
+          type: "warning" as const,
+        },
+        "too sensitive": {
+          message: "⛔ Content is sensitive",
+          type: "error" as const,
+        },
+      }[safetyAnalysis.safetyLevel!];
+
+      showToast(resultToast);
+
       switch (safetyAnalysis.safetyLevel) {
         case "safe":
-          showToast({
-            message: "✓ Content is safe",
-            type: "success",
-          });
-          await ui.renderApp(ctx, textBlocks, false);
+          ui.renderApp(ctx, textBlocks, false);
           break;
 
         case "moderate":
-          showToast({
-            message: "⚠️ Content contains moderate material",
-            type: "warning",
-          });
-          await ui.renderApp(ctx, textBlocks, true);
+          ui.renderApp(ctx, textBlocks, true);
           break;
 
         case "too sensitive":
-          showToast({
-            message: "⛔ Content is sensitive",
-            type: "error",
-          });
           ui.showContentWarning(
             safetyAnalysis.explanation ||
               "This content has been flagged as sensitive"
