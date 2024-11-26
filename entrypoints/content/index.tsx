@@ -9,27 +9,60 @@ import {
 import { extractReadableContent } from "./lib/utils";
 import { showToast } from "./lib/ui/overlay";
 import { storage } from "wxt/storage";
+import type { StrictnessLevel } from "./lib/types";
 
 // Define message type
 interface SettingsMessage {
   type: "SETTINGS_UPDATED";
   settings: {
     contentAnalysisEnabled: boolean;
+    contentStrictness: StrictnessLevel;
   };
 }
 
-// Define the storage item
-const contentAnalysisEnabled = storage.defineItem<boolean>(
-  "local:contentAnalysisEnabled",
-  {
-    fallback: true,
-  }
-);
+// Initialize settings from storage
+let currentSettings = {
+  contentAnalysisEnabled: true,
+  contentStrictness: "medium" as StrictnessLevel,
+};
 
-let isEnabled = true;
-
+// Load initial settings
 async function initializeSettings() {
-  isEnabled = await contentAnalysisEnabled.getValue();
+  const { storage } = await import("wxt/storage");
+
+  const contentAnalysisEnabled = storage.defineItem<boolean>(
+    "local:contentAnalysisEnabled",
+    {
+      fallback: true,
+    }
+  );
+
+  const contentStrictness = storage.defineItem<StrictnessLevel>(
+    "local:contentStrictness",
+    {
+      fallback: "medium",
+    }
+  );
+
+  const [enabled, strictness] = await Promise.all([
+    contentAnalysisEnabled.getValue(),
+    contentStrictness.getValue(),
+  ]);
+
+  currentSettings = {
+    contentAnalysisEnabled: enabled,
+    contentStrictness: strictness,
+  };
+
+  console.log("currentSettings ", currentSettings);
+}
+
+// Initialize settings when content script loads
+initializeSettings().catch(console.error);
+
+// Export settings for use in other modules
+export function getSettings() {
+  return currentSettings;
 }
 
 export default defineContentScript({
@@ -44,13 +77,17 @@ export default defineContentScript({
     // Use global browser.runtime API
     browser.runtime.onMessage.addListener((message: SettingsMessage) => {
       if (message.type === "SETTINGS_UPDATED") {
-        isEnabled = message.settings.contentAnalysisEnabled;
-        window.location.reload();
+        console.log("SETTINGS_UPDATED ", message.settings);
+        currentSettings = {
+          ...currentSettings,
+          ...message.settings,
+        };
+        // window.location.reload();
       }
     });
 
     try {
-      if (!isEnabled) {
+      if (!currentSettings.contentAnalysisEnabled) {
         return;
       }
 
@@ -73,7 +110,7 @@ export default defineContentScript({
         readableContent.textContent
       );
       await destroySession();
-
+      console.log("safetyAnalysis ", safetyAnalysis);
       ui.hideProcessing();
 
       const resultToast = {

@@ -9,6 +9,7 @@ import {
   WORD_COUNTS,
   SAFETY_LEVEL_PROMPT,
 } from "../constant";
+import { getSettings } from "../../index";
 
 let aiSession: any = null;
 
@@ -93,29 +94,56 @@ export async function sendMessage(
 }
 
 export async function analyzeContentSafety(
-  text: string
+  text: string,
+  options: SafetyAnalysisOptions = { strictness: "medium" }
 ): Promise<SafetyAnalysis> {
   const startTime = Date.now();
   try {
+    const settings = getSettings();
+    const effectiveStrictness =
+      settings?.contentStrictness || options.strictness;
+
     const prompt = SAFETY_LEVEL_PROMPT.replace("{{text}}", text);
     const result = await sendMessage(prompt, true);
     const match = result.match(/(\d+)/);
     const safetyNumber = match ? parseInt(match[0]) : 0;
 
+    type ThresholdConfig = {
+      safe: number;
+      moderate: number;
+    };
+
+    type ThresholdsMap = {
+      low: ThresholdConfig;
+      medium: ThresholdConfig;
+      high: ThresholdConfig;
+    };
+
+    const thresholdsMap: ThresholdsMap = {
+      low: {
+        safe: 10,
+        moderate: 10,
+      },
+      medium: {
+        safe: 2,
+        moderate: 7,
+      },
+      high: {
+        safe: -1,
+        moderate: -1,
+      },
+    };
+
+    const thresholds =
+      thresholdsMap[effectiveStrictness as keyof ThresholdsMap];
+
     let safetyLevel: ContentSafetyLevel;
-    if (safetyNumber <= 2) {
+    if (safetyNumber <= thresholds.safe) {
       safetyLevel = "safe";
-    } else if (safetyNumber >= 7) {
+    } else if (safetyNumber >= thresholds.moderate) {
       safetyLevel = "too sensitive";
     } else {
       safetyLevel = "moderate";
-    }
-
-    if (safetyLevel !== "safe") {
-      console.log(
-        `Content not safe (${safetyLevel}):`,
-        text.substring(0, 100) + "..."
-      );
     }
 
     const analysis = {
@@ -123,6 +151,7 @@ export async function analyzeContentSafety(
       safetyNumber,
       safetyLevel,
       explanation: result,
+      appliedStrictness: effectiveStrictness,
     };
 
     return analysis;
@@ -135,14 +164,6 @@ export async function analyzeContentSafety(
       errorMessage: error instanceof Error ? error.message : String(error),
     });
 
-    if (text.includes("Our Services · Passport Services · Track your Pass")) {
-      console.error("Error occurred while analyzing block 29:", {
-        error,
-        textLength: text.length,
-        textPreview: text.substring(0, 100),
-        elapsedMs: Date.now() - startTime,
-      });
-    }
     throw error;
   }
 }

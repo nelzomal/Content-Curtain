@@ -5,9 +5,7 @@ export async function createWriter(
   options: AIWriterCreateOptions = {}
 ): Promise<AIWriter> {
   if (!writerInstance) {
-    console.log("createWriter: ", ai);
     writerInstance = await ai.writer.create(options);
-    console.log("writerInstance: ", writerInstance);
   }
   return writerInstance;
 }
@@ -17,7 +15,6 @@ export async function write(
   options: AIWriterWriteOptions = {}
 ): Promise<string> {
   const writer = await createWriter();
-  console.log("writer: ", writer);
   return await writer.write(writingTask, options);
 }
 

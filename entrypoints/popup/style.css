@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  width: 300px;
+  min-height: 200px;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.grid {
+  background: white;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+
+  .grid {
+    background: #1a1a1a;
+  }
+}

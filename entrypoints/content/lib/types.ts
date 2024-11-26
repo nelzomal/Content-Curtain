@@ -10,6 +10,7 @@ export interface SafetyAnalysis {
 
 export interface SafetyAnalysisOptions {
   batchSize?: number;
+  strictness?: StrictnessLevel;
 }
 
 export interface ContentSafetyAnalysis {
@@ -50,3 +51,6 @@ export interface TextBlock {
   index: number;
   nodes?: Node[];
 }
+
+// Add these new types
+export type StrictnessLevel = "low" | "medium" | "high";
