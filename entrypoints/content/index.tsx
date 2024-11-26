@@ -8,6 +8,29 @@ import {
 } from "./lib/ui/page_parser";
 import { extractReadableContent } from "./lib/utils";
 import { showToast } from "./lib/ui/overlay";
+import { storage } from "wxt/storage";
+
+// Define message type
+interface SettingsMessage {
+  type: "SETTINGS_UPDATED";
+  settings: {
+    contentAnalysisEnabled: boolean;
+  };
+}
+
+// Define the storage item
+const contentAnalysisEnabled = storage.defineItem<boolean>(
+  "local:contentAnalysisEnabled",
+  {
+    fallback: true,
+  }
+);
+
+let isEnabled = true;
+
+async function initializeSettings() {
+  isEnabled = await contentAnalysisEnabled.getValue();
+}
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -16,7 +39,21 @@ export default defineContentScript({
   async main(ctx: ContentScriptContext): Promise<any> {
     const ui = new UIManager();
 
+    await initializeSettings();
+
+    // Use global browser.runtime API
+    browser.runtime.onMessage.addListener((message: SettingsMessage) => {
+      if (message.type === "SETTINGS_UPDATED") {
+        isEnabled = message.settings.contentAnalysisEnabled;
+        window.location.reload();
+      }
+    });
+
     try {
+      if (!isEnabled) {
+        return;
+      }
+
       ui.showProcessing(
         "Analyzing Content",
         "Please wait while we analyze your content..."
