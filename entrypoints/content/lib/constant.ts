@@ -1,4 +1,4 @@
-import { PromptType, PromptConfig } from "./types";
+import { PromptType, PromptConfig, Settings } from "./types";
 
 // Export the previously used constants
 export const SYSTEM_PROMPT = `You are a friendly, helpful AI assistant with strict content moderation standards. your main work is to rate.
@@ -90,10 +90,20 @@ export const DEFAULT_PROMPTS: Record<PromptType, PromptConfig> = {
   },
 };
 
+// filter out blocks that are too short
+export const MIN_BLOCK_LENGTH = 20;
+
 // Token limits
-export const MAX_TOKENS = 1500;
+export const MAX_TOKENS = 2500;
 export const WORD_COUNTS = {
-  START: 400,
-  MIDDLE: 200,
-  END: 200,
+  START: 1000,
+  MIDDLE: 500,
+  END: 1000,
+};
+
+export const DEFAULT_SETTINGS: Settings = {
+  contentAnalysisEnabled: true,
+  contentStrictness: "medium",
+  activePromptType: "nsfw",
+  customPrompts: DEFAULT_PROMPTS,
 };

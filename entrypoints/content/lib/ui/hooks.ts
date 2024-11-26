@@ -3,6 +3,7 @@ import { TextBlock, SafetyAnalysis } from "../types";
 import { analyzeContentSafety } from "../ai/prompt";
 import { createTooltip, showAnalysisToast } from "./overlay";
 import React from "react";
+import { MIN_BLOCK_LENGTH } from "../constant";
 
 export const useTooltip = () => {
   const showExplanationTooltip = useCallback(
@@ -109,7 +110,9 @@ export const useContentAnalysis = (
       return;
     }
 
-    const longBlocks = textBlocks.filter((block) => block.text.length > 100);
+    const longBlocks = textBlocks.filter(
+      (block) => block.text.length > MIN_BLOCK_LENGTH
+    );
     longBlocks.forEach((block) => toggleBlur(block, true));
 
     const total = longBlocks.length;

@@ -12,6 +12,13 @@ interface AI {
   readonly rewriter: AIRewriterFactory;
 }
 
+interface AISession {
+  destroy: () => void;
+  clone: () => Promise<AISession>;
+  countPromptTokens: (text: string) => Promise<number>;
+  prompt: (text: string) => Promise<string>;
+}
+
 interface AICreateMonitor extends EventTarget {
   ondownloadprogress: ((event: Event) => void) | null;
 }

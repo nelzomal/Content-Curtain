@@ -68,3 +68,14 @@ export interface Settings {
   activePromptType: PromptType;
   customPrompts: Record<PromptType, PromptConfig>;
 }
+
+export interface ThresholdConfig {
+  safe: number;
+  moderate: number;
+}
+
+export interface ThresholdsMap {
+  low: ThresholdConfig;
+  medium: ThresholdConfig;
+  high: ThresholdConfig;
+}

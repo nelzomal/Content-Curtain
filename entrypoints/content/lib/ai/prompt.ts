@@ -5,13 +5,19 @@ import {
   PromptConfig,
   PromptType,
   Settings,
+  ThresholdsMap,
 } from "../types";
-import { MAX_TOKENS, WORD_COUNTS, DEFAULT_PROMPTS } from "../constant";
-import { getSettings } from "../../index";
+import {
+  MAX_TOKENS,
+  WORD_COUNTS,
+  DEFAULT_PROMPTS,
+  DEFAULT_SETTINGS,
+} from "../constant";
 import { storage } from "wxt/storage";
 
-let aiSession: any = null;
+let aiSession: AISession | null = null;
 
+// Helper functions
 function truncateMessage(
   message: string,
   maxTokens: number = MAX_TOKENS
@@ -21,9 +27,7 @@ function truncateMessage(
   const words = message.split(/\s+/);
   const { START, MIDDLE, END } = WORD_COUNTS;
 
-  if (words.length <= START + MIDDLE + END) {
-    return message;
-  }
+  if (words.length <= START + MIDDLE + END) return message;
 
   const start = words.slice(0, START).join(" ");
   const middle = words
@@ -37,32 +41,29 @@ function truncateMessage(
   return `${start}\n\n[...]\n\n${middle}\n\n[...]\n\n${end}`;
 }
 
-export async function destroySession() {
-  if (!aiSession) {
-    return;
-  }
-  aiSession.destroy();
-  aiSession = null;
+async function getSystemPrompt(): Promise<string> {
+  const settings =
+    (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
+  const customPrompts = settings.customPrompts ?? DEFAULT_PROMPTS;
+  return customPrompts[settings.activePromptType].systemPrompt;
 }
 
-async function getSystemPrompt() {
-  const settings = await storage.getItem<Settings>("local:settings");
-  const customPrompts = settings?.customPrompts || DEFAULT_PROMPTS;
-  const activePromptType = settings?.activePromptType || "nsfw";
-  return customPrompts[activePromptType].systemPrompt;
-}
-async function ensureSession(isClone: boolean = false) {
+async function ensureSession(isClone: boolean = false): Promise<AISession> {
   if (!aiSession) {
     const systemPrompt = await getSystemPrompt();
-    console.log("systemPrompt ", systemPrompt);
     aiSession = await ai.languageModel.create({
-      systemPrompt: systemPrompt,
+      systemPrompt,
     });
   }
-  if (isClone) {
-    return aiSession.clone();
+  return isClone ? aiSession.clone() : aiSession;
+}
+
+// Main functions
+export async function destroySession(): Promise<void> {
+  if (aiSession) {
+    await aiSession.destroy();
+    aiSession = null;
   }
-  return aiSession;
 }
 
 export async function sendMessage(
@@ -78,18 +79,18 @@ export async function sendMessage(
     const processedMessage =
       estimatedTokens > 1500 ? truncateMessage(message) : message;
 
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("API call timeout")), 30000);
-    });
+    const response = await Promise.race([
+      session.prompt(processedMessage),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("API call timeout")), 30000)
+      ),
+    ]);
 
-    const responsePromise = session.prompt(processedMessage);
-    const result = await Promise.race([responsePromise, timeoutPromise]);
-
-    if (typeof result !== "string") {
+    if (typeof response !== "string") {
       throw new Error("Invalid response from API");
     }
 
-    return result;
+    return response;
   } catch (error) {
     console.error("Error in sendMessage:", {
       error,
@@ -106,67 +107,41 @@ export async function analyzeContentSafety(
   options: SafetyAnalysisOptions = { strictness: "medium" }
 ): Promise<SafetyAnalysis> {
   const startTime = Date.now();
+
   try {
-    const settings = getSettings();
+    const settings =
+      (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
     const effectiveStrictness =
-      settings?.contentStrictness || options.strictness;
+      settings.contentStrictness ?? options.strictness;
 
     const prompt = settings.customPrompts[
       settings.activePromptType
     ].safetyLevelPrompt.replace("{{text}}", text);
-    console.log("prompt ", prompt);
-    console.log("settings ", settings);
+
     const result = await sendMessage(prompt, true);
-    const match = result.match(/(\d+)/);
-    const safetyNumber = match ? parseInt(match[0]) : 0;
-
-    type ThresholdConfig = {
-      safe: number;
-      moderate: number;
-    };
-
-    type ThresholdsMap = {
-      low: ThresholdConfig;
-      medium: ThresholdConfig;
-      high: ThresholdConfig;
-    };
+    const safetyNumber = parseInt(result.match(/(\d+)/)?.[0] ?? "0");
 
     const thresholdsMap: ThresholdsMap = {
-      low: {
-        safe: 10,
-        moderate: 10,
-      },
-      medium: {
-        safe: 2,
-        moderate: 7,
-      },
-      high: {
-        safe: -1,
-        moderate: -1,
-      },
+      low: { safe: 10, moderate: 10 },
+      medium: { safe: 2, moderate: 7 },
+      high: { safe: -1, moderate: -1 },
     };
 
     const thresholds =
       thresholdsMap[effectiveStrictness as keyof ThresholdsMap];
+    const safetyLevel: ContentSafetyLevel =
+      safetyNumber <= thresholds.safe
+        ? "safe"
+        : safetyNumber >= thresholds.moderate
+        ? "too sensitive"
+        : "moderate";
 
-    let safetyLevel: ContentSafetyLevel;
-    if (safetyNumber <= thresholds.safe) {
-      safetyLevel = "safe";
-    } else if (safetyNumber >= thresholds.moderate) {
-      safetyLevel = "too sensitive";
-    } else {
-      safetyLevel = "moderate";
-    }
-
-    const analysis = {
+    return {
       text,
       safetyNumber,
       safetyLevel,
       explanation: result,
-      appliedStrictness: effectiveStrictness,
     };
-
-    return analysis;
   } catch (error) {
     console.error("Error in analyzeContentSafety:", {
       error,
@@ -175,74 +150,55 @@ export async function analyzeContentSafety(
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
     });
-
     throw error;
   }
 }
 
 export class PromptManager {
-  constructor() {}
-
-  async initialize() {
+  async initialize(): Promise<void> {
     const stored = await storage.getItem("local:customPrompts");
     if (!stored) {
-      await storage.setItem("local:customPrompts", DEFAULT_PROMPTS);
-      await storage.setItem("local:activePromptType", "nsfw" as PromptType);
-      await storage.setItem("local:settings", {
-        contentAnalysisEnabled: true,
-        contentStrictness: "medium",
-        activePromptType: "nsfw",
-        customPrompts: DEFAULT_PROMPTS,
-      } as Settings);
+      await Promise.all([
+        storage.setItem("local:customPrompts", DEFAULT_PROMPTS),
+        storage.setItem("local:activePromptType", "nsfw" as PromptType),
+        storage.setItem("local:settings", DEFAULT_SETTINGS),
+      ]);
     }
   }
 
   async getActivePrompts(): Promise<PromptConfig> {
-    const settings = await storage.getItem<Settings>("local:settings");
-    const customPrompts = await storage.getItem<
-      Record<PromptType, PromptConfig>
-    >("local:customPrompts");
-
-    const safeSettings: Settings = settings || {
-      contentAnalysisEnabled: true,
-      contentStrictness: "medium",
-      activePromptType: "nsfw",
-      customPrompts: DEFAULT_PROMPTS,
-    };
-
-    const safePrompts: Record<PromptType, PromptConfig> =
-      customPrompts || DEFAULT_PROMPTS;
-
-    return safePrompts[safeSettings.activePromptType];
+    const settings =
+      (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
+    const customPrompts =
+      (await storage.getItem<Record<PromptType, PromptConfig>>(
+        "local:customPrompts"
+      )) ?? DEFAULT_PROMPTS;
+    return customPrompts[
+      settings.activePromptType as keyof typeof customPrompts
+    ];
   }
 
-  async updatePrompts(type: PromptType, config: PromptConfig) {
-    const customPrompts = await storage.getItem<
-      Record<PromptType, PromptConfig>
-    >("local:customPrompts");
-
-    const safePrompts: Record<PromptType, PromptConfig> =
-      customPrompts || DEFAULT_PROMPTS;
-
-    safePrompts[type] = config;
-    await storage.setItem("local:customPrompts", safePrompts);
+  async updatePrompts(type: PromptType, config: PromptConfig): Promise<void> {
+    const customPrompts =
+      (await storage.getItem<Record<PromptType, PromptConfig>>(
+        "local:customPrompts"
+      )) ?? DEFAULT_PROMPTS;
+    await storage.setItem("local:customPrompts", {
+      ...customPrompts,
+      [type]: config,
+    });
   }
 
-  async setActivePromptType(type: PromptType) {
-    const settings = await storage.getItem<Settings>("local:settings");
-
-    const safeSettings: Settings = settings || {
-      contentAnalysisEnabled: true,
-      contentStrictness: "medium",
-      activePromptType: "nsfw",
-      customPrompts: DEFAULT_PROMPTS,
-    };
-
-    safeSettings.activePromptType = type;
-    await storage.setItem("local:settings", safeSettings);
+  async setActivePromptType(type: PromptType): Promise<void> {
+    const settings =
+      (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
+    await storage.setItem("local:settings", {
+      ...settings,
+      activePromptType: type,
+    });
   }
 
-  async resetToDefault(type: PromptType) {
+  async resetToDefault(type: PromptType): Promise<void> {
     await this.updatePrompts(type, DEFAULT_PROMPTS[type]);
   }
 }
