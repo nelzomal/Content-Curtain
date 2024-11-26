@@ -13,6 +13,16 @@ body {
   background: white;
 }
 
+/* Make dropdown content opaque */
+[role="listbox"] {
+  @apply bg-white dark:bg-gray-900;
+}
+
+/* Style dropdown items */
+[role="option"] {
+  @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   body {
@@ -22,5 +32,11 @@ body {
 
   .grid {
     background: #1a1a1a;
+  }
+
+  /* Ensure dropdown background is solid in dark mode */
+  [role="listbox"] {
+    background: #1a1a1a;
+    border: 1px solid #333;
   }
 }

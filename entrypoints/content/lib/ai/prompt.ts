@@ -2,14 +2,13 @@ import {
   SafetyAnalysis,
   ContentSafetyLevel,
   SafetyAnalysisOptions,
+  PromptConfig,
+  PromptType,
+  Settings,
 } from "../types";
-import {
-  SYSTEM_PROMPT,
-  MAX_TOKENS,
-  WORD_COUNTS,
-  SAFETY_LEVEL_PROMPT,
-} from "../constant";
+import { MAX_TOKENS, WORD_COUNTS, DEFAULT_PROMPTS } from "../constant";
 import { getSettings } from "../../index";
+import { storage } from "wxt/storage";
 
 let aiSession: any = null;
 
@@ -46,10 +45,18 @@ export async function destroySession() {
   aiSession = null;
 }
 
+async function getSystemPrompt() {
+  const settings = await storage.getItem<Settings>("local:settings");
+  const customPrompts = settings?.customPrompts || DEFAULT_PROMPTS;
+  const activePromptType = settings?.activePromptType || "nsfw";
+  return customPrompts[activePromptType].systemPrompt;
+}
 async function ensureSession(isClone: boolean = false) {
   if (!aiSession) {
+    const systemPrompt = await getSystemPrompt();
+    console.log("systemPrompt ", systemPrompt);
     aiSession = await ai.languageModel.create({
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: systemPrompt,
     });
   }
   if (isClone) {
@@ -64,8 +71,9 @@ export async function sendMessage(
 ): Promise<string> {
   try {
     const session = await ensureSession(isClone);
+    const systemPrompt = await getSystemPrompt();
     const estimatedTokens = await session.countPromptTokens(
-      SYSTEM_PROMPT + message
+      systemPrompt + message
     );
     const processedMessage =
       estimatedTokens > 1500 ? truncateMessage(message) : message;
@@ -103,7 +111,11 @@ export async function analyzeContentSafety(
     const effectiveStrictness =
       settings?.contentStrictness || options.strictness;
 
-    const prompt = SAFETY_LEVEL_PROMPT.replace("{{text}}", text);
+    const prompt = settings.customPrompts[
+      settings.activePromptType
+    ].safetyLevelPrompt.replace("{{text}}", text);
+    console.log("prompt ", prompt);
+    console.log("settings ", settings);
     const result = await sendMessage(prompt, true);
     const match = result.match(/(\d+)/);
     const safetyNumber = match ? parseInt(match[0]) : 0;
@@ -165,5 +177,72 @@ export async function analyzeContentSafety(
     });
 
     throw error;
+  }
+}
+
+export class PromptManager {
+  constructor() {}
+
+  async initialize() {
+    const stored = await storage.getItem("local:customPrompts");
+    if (!stored) {
+      await storage.setItem("local:customPrompts", DEFAULT_PROMPTS);
+      await storage.setItem("local:activePromptType", "nsfw" as PromptType);
+      await storage.setItem("local:settings", {
+        contentAnalysisEnabled: true,
+        contentStrictness: "medium",
+        activePromptType: "nsfw",
+        customPrompts: DEFAULT_PROMPTS,
+      } as Settings);
+    }
+  }
+
+  async getActivePrompts(): Promise<PromptConfig> {
+    const settings = await storage.getItem<Settings>("local:settings");
+    const customPrompts = await storage.getItem<
+      Record<PromptType, PromptConfig>
+    >("local:customPrompts");
+
+    const safeSettings: Settings = settings || {
+      contentAnalysisEnabled: true,
+      contentStrictness: "medium",
+      activePromptType: "nsfw",
+      customPrompts: DEFAULT_PROMPTS,
+    };
+
+    const safePrompts: Record<PromptType, PromptConfig> =
+      customPrompts || DEFAULT_PROMPTS;
+
+    return safePrompts[safeSettings.activePromptType];
+  }
+
+  async updatePrompts(type: PromptType, config: PromptConfig) {
+    const customPrompts = await storage.getItem<
+      Record<PromptType, PromptConfig>
+    >("local:customPrompts");
+
+    const safePrompts: Record<PromptType, PromptConfig> =
+      customPrompts || DEFAULT_PROMPTS;
+
+    safePrompts[type] = config;
+    await storage.setItem("local:customPrompts", safePrompts);
+  }
+
+  async setActivePromptType(type: PromptType) {
+    const settings = await storage.getItem<Settings>("local:settings");
+
+    const safeSettings: Settings = settings || {
+      contentAnalysisEnabled: true,
+      contentStrictness: "medium",
+      activePromptType: "nsfw",
+      customPrompts: DEFAULT_PROMPTS,
+    };
+
+    safeSettings.activePromptType = type;
+    await storage.setItem("local:settings", safeSettings);
+  }
+
+  async resetToDefault(type: PromptType) {
+    await this.updatePrompts(type, DEFAULT_PROMPTS[type]);
   }
 }

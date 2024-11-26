@@ -54,3 +54,17 @@ export interface TextBlock {
 
 // Add these new types
 export type StrictnessLevel = "low" | "medium" | "high";
+
+export interface PromptConfig {
+  systemPrompt: string;
+  safetyLevelPrompt: string;
+}
+
+export type PromptType = "nsfw" | "sportsSpoiler" | "generalSpoiler";
+
+export interface Settings {
+  contentAnalysisEnabled: boolean;
+  contentStrictness: StrictnessLevel;
+  activePromptType: PromptType;
+  customPrompts: Record<PromptType, PromptConfig>;
+}
