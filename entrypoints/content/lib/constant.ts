@@ -15,14 +15,13 @@ export const SYSTEM_PROMPT = `You are a friendly, helpful AI assistant with stri
       - Always prioritize user safety and well-being`;
 
 export const SAFETY_LEVEL_PROMPT = `Rate the following text for adult content and violence on a scale of 0-10 where:
-      1-2: No adult content or violence
-      2-4: Mild references to adult themes or mild violence (like pushing)
-      4-6: Moderate adult content or violence (fighting, mild gore)
-      6-8: Strong adult content or violence
-      8-10: Extreme adult content or extreme violence
+      0-2: No adult content or violence
+      3-4: Mild references to adult themes or mild violence (like pushing)
+      5-6: Moderate adult content or violence (fighting, mild gore)
+      7-8: Strong adult content or violence
+      9-10: Extreme adult content or extreme violence
       
       Provide the rating and a brief explanation focusing only on adult content and violence levels.
-
       Text to analyze: "{{text}}"`;
 
 // Default prompts for different content types
@@ -49,42 +48,13 @@ export const DEFAULT_PROMPTS: Record<PromptType, PromptConfig> = {
       - Maintain neutrality in analysis`,
 
     safetyLevelPrompt: `Rate the following text for sports spoilers on a scale of 0-10 where:
-      1-2: No sports spoilers (general discussion, historical facts)
-      2-4: Mild sports information (game schedules, player interviews)
-      4-6: Moderate spoilers (partial game updates, team statistics)
-      6-8: Significant spoilers (final scores, major plays)
-      8-10: Critical spoilers (championship results, major career announcements)
+      0-2: No sports spoilers (general discussion, historical facts)
+      3-4: Mild sports information (game schedules, player interviews)
+      5-6: Moderate spoilers (partial game updates, team statistics)
+      7-8: Significant spoilers (final scores, major plays)
+      9-10: Critical spoilers (championship results, major career announcements)
       
       Provide the rating and a brief explanation focusing only on the level of sports spoilers.
-
-      Text to analyze: "{{text}}"`,
-  },
-
-  generalSpoiler: {
-    systemPrompt: `You are an AI assistant specialized in identifying and rating story spoilers across media. Your main task is to analyze and rate content.
-
-      Story Spoiler Guidelines:
-      - Identify plot twists and major story revelations
-      - Detect character deaths or significant character developments
-      - Flag ending revelations and major plot points
-      - Identify key narrative surprises and story outcomes
-      - Recognize important relationship developments
-      
-      General Guidelines:
-      - Consider the significance of the revealed information
-      - Evaluate the impact on story enjoyment
-      - Focus on narrative-critical information
-      - Avoid including the actual spoilers in explanations
-      - Consider both direct and indirect spoilers`,
-
-    safetyLevelPrompt: `Rate the following text for story spoilers on a scale of 0-10 where:
-      1-2: No story spoilers (general discussion, promotional material)
-      2-4: Mild spoilers (basic premise, early setup details)
-      4-6: Moderate spoilers (mid-story developments, character introductions)
-      6-8: Significant spoilers (major plot points, character arcs)
-      8-10: Critical spoilers (ending reveals, major plot twists)
-      
-      Provide the rating and a brief explanation focusing only on the level of story spoilers.
 
       Text to analyze: "{{text}}"`,
   },
@@ -102,8 +72,8 @@ export const WORD_COUNTS = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  contentAnalysisEnabled: true,
-  contentStrictness: "medium",
   activePromptType: "nsfw",
   customPrompts: DEFAULT_PROMPTS,
+  contentStrictness: "medium",
+  contentAnalysisEnabled: true,
 };

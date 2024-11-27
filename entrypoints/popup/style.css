@@ -3,24 +3,83 @@
 @tailwind utilities;
 
 body {
-  width: 300px;
-  min-height: 200px;
+  width: 400px;
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
+  min-height: 300px;
+  transition: min-height 0.2s ease-in-out;
+}
+
+body.dropdown-open {
+  min-height: 400px;
 }
 
 .grid {
   background: white;
+  padding: 1rem;
 }
 
-/* Make dropdown content opaque */
-[role="listbox"] {
-  @apply bg-white dark:bg-gray-900;
+/* Make dropdown menus opaque */
+[data-radix-popper-content-wrapper] {
+  @apply bg-white;
 }
 
-/* Style dropdown items */
-[role="option"] {
-  @apply hover:bg-gray-100 dark:hover:bg-gray-800;
+/* Style dropdown content */
+[role="menu"] {
+  @apply bg-white border border-gray-200;
+}
+
+/* Style dropdown items with higher specificity */
+[role="menuitem"].relative.select-none {
+  @apply text-gray-900 transition-all duration-200 ease-in-out;
+  position: relative;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  padding: 8px 12px !important;
+}
+
+[role="menuitem"].relative.select-none:last-child {
+  border-bottom: none !important;
+}
+
+[role="menuitem"].relative.select-none:hover {
+  @apply bg-gray-100/30;
+  transform: translateX(4px);
+}
+
+/* Make tabs more spacious */
+[role="tablist"] {
+  @apply rounded-lg;
+  position: relative;
+  border-bottom: none;
+  background-color: transparent !important;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* Move the dimmed border lower */
+[role="tablist"]::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Keep the active indicator position at the top */
+[role="tab"][data-state="active"]::after {
+  bottom: 0 !important;
+}
+
+/* Keep inactive tabs indicator position consistent */
+[role="tab"]::after {
+  bottom: 0 !important;
+}
+
+/* Add spacing between form elements */
+.space-y-4 > * {
+  margin-bottom: 1rem;
 }
 
 /* Dark mode support */
@@ -34,9 +93,122 @@ body {
     background: #1a1a1a;
   }
 
+  /* Ensure inputs and buttons have proper dark mode colors */
+  input,
+  button {
+    @apply bg-gray-900 border-gray-700;
+  }
+
   /* Ensure dropdown background is solid in dark mode */
-  [role="listbox"] {
+  [role="menu"],
+  [data-radix-popper-content-wrapper] {
     background: #1a1a1a;
-    border: 1px solid #333;
+    border-color: #333;
+  }
+
+  [role="tablist"]::after {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  [role="tab"][data-state="active"]::after {
+    background-color: white !important;
+  }
+
+  [role="menuitem"].relative.select-none {
+    @apply text-gray-100;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  [role="menuitem"].relative.select-none:last-child {
+    border-bottom: none !important;
+  }
+
+  [role="menuitem"].relative.select-none:hover {
+    @apply bg-gray-800/40;
+    transform: translateX(4px);
+  }
+
+  .grid button {
+    @apply text-white;
+  }
+}
+
+body.expanded {
+  min-height: 400px !important;
+  transition: min-height 0.3s ease;
+}
+
+/* Remove any background color changes on active state */
+[role="tab"][data-state="active"] {
+  background-color: transparent !important;
+}
+
+/* Remove any background colors from tabs */
+[role="tab"] {
+  background-color: transparent !important;
+  transition: opacity 0.2s ease !important;
+}
+
+[role="tab"][data-state="inactive"]:hover {
+  opacity: 0.8 !important; /* Makes it slightly whiter when hovering inactive tab */
+}
+
+[role="tab"][data-state="active"] {
+  background-color: transparent !important;
+  opacity: 1 !important;
+}
+
+[role="tab"]:hover {
+  background-color: transparent !important;
+}
+
+/* Add padding to customize tab content */
+[role="tabpanel"][data-orientation="horizontal"] {
+  @apply px-1;
+}
+
+/* Update border to buttons */
+.btn-bordered {
+  @apply border border-white !important;
+  transition: opacity 0.2s ease !important;
+  opacity: 0.8;
+}
+
+.btn-bordered:hover {
+  opacity: 1;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  /* ... existing dark mode code ... */
+
+  .btn-bordered {
+    @apply border-white !important;
+    opacity: 0.8;
+  }
+
+  .btn-bordered:hover {
+    opacity: 1;
+  }
+}
+
+/* Override any conflicting styles */
+.bg-accent {
+  background-color: rgba(
+    243,
+    244,
+    246,
+    0.2
+  ) !important; /* gray-100 with opacity */
+}
+
+@media (prefers-color-scheme: dark) {
+  .bg-accent {
+    background-color: rgba(
+      31,
+      41,
+      55,
+      0.4
+    ) !important; /* gray-800 with opacity */
   }
 }

@@ -56,11 +56,14 @@ export interface TextBlock {
 export type StrictnessLevel = "low" | "medium" | "high";
 
 export interface PromptConfig {
+  name?: string;
+  systemPromptRules?: string[];
   systemPrompt: string;
+  safetyLevelPromptRules?: string[];
   safetyLevelPrompt: string;
 }
 
-export type PromptType = "nsfw" | "sportsSpoiler" | "generalSpoiler";
+export type PromptType = "nsfw" | "sportSpoiler" | string;
 
 export interface Settings {
   contentAnalysisEnabled: boolean;

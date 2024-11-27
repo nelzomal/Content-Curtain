@@ -16,11 +16,7 @@ import { DEFAULT_PROMPTS } from "./lib/constant";
 // Define message type
 interface SettingsMessage {
   type: "SETTINGS_UPDATED";
-  settings: {
-    contentAnalysisEnabled: boolean;
-    contentStrictness: StrictnessLevel;
-    activePromptType: PromptType;
-  };
+  settings: Settings;
 }
 
 // Initialize settings from storage
@@ -30,8 +26,6 @@ let currentSettings: Settings = {
   activePromptType: "nsfw",
   customPrompts: DEFAULT_PROMPTS,
 };
-
-let aiSession: any = null;
 
 // Load initial settings
 async function initializeSettings() {
@@ -56,25 +50,19 @@ async function initializeSettings() {
     }
   );
   console.log("activePromptType ", activePromptType);
-  const settings = await storage.getItem<Settings>("local:settings");
-  console.log("settings ", settings);
 
-  if (settings) {
-    currentSettings = settings;
-  } else {
-    const [enabled, strictness, promptType] = await Promise.all([
-      contentAnalysisEnabled.getValue(),
-      contentStrictness.getValue(),
-      activePromptType.getValue(),
-    ]);
+  const [enabled, strictness, promptType] = await Promise.all([
+    contentAnalysisEnabled.getValue(),
+    contentStrictness.getValue(),
+    activePromptType.getValue(),
+  ]);
 
-    currentSettings = {
-      contentAnalysisEnabled: enabled,
-      contentStrictness: strictness,
-      activePromptType: promptType,
-      customPrompts: DEFAULT_PROMPTS,
-    };
-  }
+  currentSettings = {
+    contentAnalysisEnabled: enabled,
+    contentStrictness: strictness,
+    activePromptType: promptType,
+    customPrompts: DEFAULT_PROMPTS,
+  };
 
   console.log("Initialized settings:", currentSettings);
 }
@@ -99,18 +87,7 @@ export default defineContentScript({
         console.log("Settings updated:", message.settings);
 
         // Update current settings
-        currentSettings = {
-          ...currentSettings,
-          ...message.settings,
-        };
-
-        // Save updated settings to storage
-        await storage.setItem("local:settings", currentSettings);
-
-        console.log("Settings saved to storage:", currentSettings);
-
-        // Optionally reload the page to apply new settings
-        // window.location.reload();
+        // TODO: update settings
       }
     });
 
@@ -136,14 +113,6 @@ export default defineContentScript({
 
       const promptManager = new PromptManager();
       await promptManager.initialize();
-
-      // Get active prompts when needed
-      const activePrompts = await promptManager.getActivePrompts();
-
-      // Create AI session with active prompt
-      aiSession = await ai.languageModel.create({
-        systemPrompt: activePrompts.systemPrompt,
-      });
 
       const safetyAnalysis = await analyzeContentSafety(
         readableContent.textContent,

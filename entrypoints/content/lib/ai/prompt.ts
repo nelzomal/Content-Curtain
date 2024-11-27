@@ -14,6 +14,12 @@ import {
   DEFAULT_SETTINGS,
 } from "../constant";
 import { storage } from "wxt/storage";
+import {
+  generatePromptConfig,
+  parseSafetyLevelResponse,
+  parseSystemPromptResponse,
+  withRetry,
+} from "./utils";
 
 let aiSession: AISession | null = null;
 
@@ -42,15 +48,41 @@ function truncateMessage(
 }
 
 async function getSystemPrompt(): Promise<string> {
+  console.log("Getting system prompt...");
   const settings =
     (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
+  console.log("Retrieved settings:", settings);
+
   const customPrompts = settings.customPrompts ?? DEFAULT_PROMPTS;
-  return customPrompts[settings.activePromptType].systemPrompt;
+  console.log("Active prompt type:", settings.activePromptType);
+  console.log("Custom prompts:", customPrompts);
+
+  const activePrompt = customPrompts[settings.activePromptType];
+  console.log("Active prompt:", activePrompt);
+
+  if (!activePrompt?.systemPrompt) {
+    console.warn("No system prompt found, using default");
+    return (
+      DEFAULT_PROMPTS[settings.activePromptType]?.systemPrompt ||
+      "You are an AI assistant helping with content moderation."
+    );
+  }
+
+  return activePrompt.systemPrompt;
 }
 
-async function ensureSession(isClone: boolean = false): Promise<AISession> {
+async function ensureSession(
+  isClone: boolean = false,
+  systemPrompt?: string,
+  isNew: boolean = false
+): Promise<AISession> {
+  if (isNew && aiSession) {
+    await destroySession();
+  }
   if (!aiSession) {
-    const systemPrompt = await getSystemPrompt();
+    if (!systemPrompt) {
+      systemPrompt = await getSystemPrompt();
+    }
     aiSession = await ai.languageModel.create({
       systemPrompt,
     });
@@ -61,7 +93,7 @@ async function ensureSession(isClone: boolean = false): Promise<AISession> {
 // Main functions
 export async function destroySession(): Promise<void> {
   if (aiSession) {
-    await aiSession.destroy();
+    aiSession.destroy();
     aiSession = null;
   }
 }
@@ -76,6 +108,7 @@ export async function sendMessage(
     const estimatedTokens = await session.countPromptTokens(
       systemPrompt + message
     );
+
     const processedMessage =
       estimatedTokens > 1500 ? truncateMessage(message) : message;
 
@@ -97,6 +130,7 @@ export async function sendMessage(
       messagePreview: message.substring(0, 100),
       errorType: error instanceof Error ? error.name : typeof error,
       errorMessage: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
     throw error;
   }
@@ -111,12 +145,13 @@ export async function analyzeContentSafety(
   try {
     const settings =
       (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
+    console.log("Settings:_______________________________________\n", settings);
     const effectiveStrictness =
       settings.contentStrictness ?? options.strictness;
 
     const prompt = settings.customPrompts[
       settings.activePromptType
-    ].safetyLevelPrompt.replace("{{text}}", text);
+    ].safetyLevelPrompt!.replace("{{text}}", text);
 
     const result = await sendMessage(prompt, true);
     const safetyNumber = parseInt(result.match(/(\d+)/)?.[0] ?? "0");
@@ -156,13 +191,27 @@ export async function analyzeContentSafety(
 
 export class PromptManager {
   async initialize(): Promise<void> {
+    console.log("Initializing PromptManager...");
     const stored = await storage.getItem("local:customPrompts");
+    console.log("Stored custom prompts:", stored);
+
     if (!stored) {
-      await Promise.all([
-        storage.setItem("local:customPrompts", DEFAULT_PROMPTS),
-        storage.setItem("local:activePromptType", "nsfw" as PromptType),
-        storage.setItem("local:settings", DEFAULT_SETTINGS),
-      ]);
+      console.log("No stored prompts found, setting defaults...");
+      try {
+        await Promise.all([
+          storage.setItem("local:customPrompts", DEFAULT_PROMPTS),
+          storage.setItem("local:activePromptType", "nsfw" as PromptType),
+          storage.setItem("local:settings", {
+            ...DEFAULT_SETTINGS,
+            customPrompts: DEFAULT_PROMPTS,
+            activePromptType: "nsfw",
+          }),
+        ]);
+        console.log("Default settings initialized successfully");
+      } catch (error) {
+        console.error("Error initializing settings:", error);
+        throw error;
+      }
     }
   }
 
@@ -173,20 +222,12 @@ export class PromptManager {
       (await storage.getItem<Record<PromptType, PromptConfig>>(
         "local:customPrompts"
       )) ?? DEFAULT_PROMPTS;
-    return customPrompts[
-      settings.activePromptType as keyof typeof customPrompts
-    ];
-  }
 
-  async updatePrompts(type: PromptType, config: PromptConfig): Promise<void> {
-    const customPrompts =
-      (await storage.getItem<Record<PromptType, PromptConfig>>(
-        "local:customPrompts"
-      )) ?? DEFAULT_PROMPTS;
-    await storage.setItem("local:customPrompts", {
-      ...customPrompts,
-      [type]: config,
-    });
+    // Return custom prompt if it exists, otherwise fall back to default
+    return (
+      customPrompts[settings.activePromptType] ??
+      DEFAULT_PROMPTS[settings.activePromptType]
+    );
   }
 
   async setActivePromptType(type: PromptType): Promise<void> {
@@ -198,7 +239,98 @@ export class PromptManager {
     });
   }
 
-  async resetToDefault(type: PromptType): Promise<void> {
-    await this.updatePrompts(type, DEFAULT_PROMPTS[type]);
+  async generateCustomPrompts(
+    filterDescription: string
+  ): Promise<PromptConfig> {
+    console.log("Generating custom prompts for:", filterDescription);
+
+    // Default system prompt if the custom one fails
+    const fallbackSystemPrompt =
+      "You are an AI prompt generator specializing in creating content rating guidelines.";
+
+    try {
+      // Ensure settings are initialized
+      await this.initialize();
+
+      const systemPrompt = await getSystemPrompt().catch((err) => {
+        console.warn("Error getting system prompt, using fallback:", err);
+        return fallbackSystemPrompt;
+      });
+
+      await ensureSession(false, systemPrompt, true);
+
+      const systemPromptMessage = `Follow the example format:
+        **Strictly avoid any adult themes, violence, inappropriate language, or mature content**
+        **Immediately reject requests involving harmful, dangerous, or unsafe activities**
+        **Keep responses educational and family-friendly**
+        **If a topic is inappropriate for children, politely decline to discuss it**
+
+        Generate prompts for Content Moderation Rules for "${filterDescription}": 
+        List four rules in **<moderation rule>** format.
+      `;
+
+      try {
+        const rules = await withRetry(
+          async () => {
+            const systemPromptResponse = await sendMessage(
+              systemPromptMessage,
+              true
+            );
+            return parseSystemPromptResponse(systemPromptResponse);
+          },
+          (result) => result.length > 3
+        );
+
+        const safetyLevelMessage = `Follow the example format:
+          Example:
+          **0-2: No adult content or violence**
+          **3-4: Mild references to adult themes or mild violence (like pushing)**
+          **5-6: Moderate adult content or violence (fighting, mild gore)**
+          **7-8: Strong adult content or violence**
+          **9-10: Extreme adult content or extreme violence**
+
+          Generate prompts for a content rating guideline for "${filterDescription}" on a scale of 0-10.
+          List 5 rating rules in **0-2 rating rule** format.
+          rating rule is short and concise, no need to explain the rule.`;
+
+        const safetyLevels = await withRetry(
+          async () => {
+            const safetyLevelResponse = await sendMessage(
+              safetyLevelMessage,
+              true
+            );
+            return parseSafetyLevelResponse(safetyLevelResponse);
+          },
+          (result) => result.length >= 5
+        );
+
+        const promptConfig = generatePromptConfig(rules, safetyLevels);
+
+        if (
+          !promptConfig.systemPromptRules ||
+          !promptConfig.safetyLevelPromptRules
+        ) {
+          throw new Error("Invalid prompt generation response format");
+        }
+
+        return promptConfig;
+      } catch (error) {
+        console.error("Error details:", {
+          error,
+          type: error instanceof Error ? error.name : typeof error,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw new Error(`Failed to generate custom prompts: ${error}`);
+      }
+    } catch (error) {
+      console.error("Error in generateCustomPrompts:", {
+        error,
+        filterDescription,
+        errorType: error instanceof Error ? error.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 }
