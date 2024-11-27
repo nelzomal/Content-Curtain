@@ -101,22 +101,31 @@ export async function withRetry<T>(
   );
 }
 
+function cleanText(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => line.replace(/\*\*|\*\s/g, "").trim())
+    .join("\n");
+}
+
 function generateSystemPrompt(systemPromptRules: string[]): string {
-  return `You are an AI prompt generator specializing in creating content rating guidelines.
+  return cleanText(`You are an AI prompt generator specializing in creating content rating guidelines.
         ${systemPromptRules.map((rule) => `- ${rule}`).join("\n")}
 
         General Guidelines:
         - Be concise but informative
         - If you don't know something, be honest about it
-        - Always prioritize user safety and well-being`;
+        - Always prioritize user safety and well-being`);
 }
 
 function generateSafetyLevelPrompt(safetyLevelPromptRules: string[]): string {
-  return `Rate the following text for adult content and violence on a scale of 0-10 where:
+  return cleanText(
+    `Rate the following text for adult content and violence on a scale of 0-10 where:
         ${safetyLevelPromptRules.map((rule) => `**${rule}**`).join("\n")}
     
         Provide the rating and a brief explanation focusing only on adult content and violence levels.
-        Text to analyze: "{{text}}"`;
+        Text to analyze: "{{text}}"`
+  );
 }
 
 export function generatePromptConfig(

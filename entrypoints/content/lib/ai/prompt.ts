@@ -20,10 +20,10 @@ import {
   parseSystemPromptResponse,
   withRetry,
 } from "./utils";
+import { createWriter } from "./write";
 
 let aiSession: AISession | null = null;
 
-// Helper functions
 function truncateMessage(
   message: string,
   maxTokens: number = MAX_TOKENS
@@ -48,20 +48,12 @@ function truncateMessage(
 }
 
 async function getSystemPrompt(): Promise<string> {
-  console.log("Getting system prompt...");
   const settings =
     (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
-  console.log("Retrieved settings:", settings);
-
   const customPrompts = settings.customPrompts ?? DEFAULT_PROMPTS;
-  console.log("Active prompt type:", settings.activePromptType);
-  console.log("Custom prompts:", customPrompts);
-
   const activePrompt = customPrompts[settings.activePromptType];
-  console.log("Active prompt:", activePrompt);
 
   if (!activePrompt?.systemPrompt) {
-    console.warn("No system prompt found, using default");
     return (
       DEFAULT_PROMPTS[settings.activePromptType]?.systemPrompt ||
       "You are an AI assistant helping with content moderation."
@@ -90,7 +82,6 @@ async function ensureSession(
   return isClone ? aiSession.clone() : aiSession;
 }
 
-// Main functions
 export async function destroySession(): Promise<void> {
   if (aiSession) {
     aiSession.destroy();
@@ -125,13 +116,6 @@ export async function sendMessage(
 
     return response;
   } catch (error) {
-    console.error("Error in sendMessage:", {
-      error,
-      messagePreview: message.substring(0, 100),
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
     throw error;
   }
 }
@@ -140,12 +124,9 @@ export async function analyzeContentSafety(
   text: string,
   options: SafetyAnalysisOptions = { strictness: "medium" }
 ): Promise<SafetyAnalysis> {
-  const startTime = Date.now();
-
   try {
     const settings =
       (await storage.getItem<Settings>("local:settings")) ?? DEFAULT_SETTINGS;
-    console.log("Settings:_______________________________________\n", settings);
     const effectiveStrictness =
       settings.contentStrictness ?? options.strictness;
 
@@ -178,25 +159,17 @@ export async function analyzeContentSafety(
       explanation: result,
     };
   } catch (error) {
-    console.error("Error in analyzeContentSafety:", {
-      error,
-      textPreview: text.substring(0, 100),
-      elapsedMs: Date.now() - startTime,
-      errorType: error instanceof Error ? error.name : typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    });
     throw error;
   }
 }
 
 export class PromptManager {
+  private readonly validRanges = ["0-2", "3-4", "5-6", "7-8", "9-10"] as const;
+
   async initialize(): Promise<void> {
-    console.log("Initializing PromptManager...");
     const stored = await storage.getItem("local:customPrompts");
-    console.log("Stored custom prompts:", stored);
 
     if (!stored) {
-      console.log("No stored prompts found, setting defaults...");
       try {
         await Promise.all([
           storage.setItem("local:customPrompts", DEFAULT_PROMPTS),
@@ -207,9 +180,7 @@ export class PromptManager {
             activePromptType: "nsfw",
           }),
         ]);
-        console.log("Default settings initialized successfully");
       } catch (error) {
-        console.error("Error initializing settings:", error);
         throw error;
       }
     }
@@ -223,7 +194,6 @@ export class PromptManager {
         "local:customPrompts"
       )) ?? DEFAULT_PROMPTS;
 
-    // Return custom prompt if it exists, otherwise fall back to default
     return (
       customPrompts[settings.activePromptType] ??
       DEFAULT_PROMPTS[settings.activePromptType]
@@ -242,66 +212,75 @@ export class PromptManager {
   async generateCustomPrompts(
     filterDescription: string
   ): Promise<PromptConfig> {
-    console.log("Generating custom prompts for:", filterDescription);
-
-    // Default system prompt if the custom one fails
     const fallbackSystemPrompt =
       "You are an AI prompt generator specializing in creating content rating guidelines.";
 
     try {
-      // Ensure settings are initialized
       await this.initialize();
 
-      const systemPrompt = await getSystemPrompt().catch((err) => {
-        console.warn("Error getting system prompt, using fallback:", err);
-        return fallbackSystemPrompt;
+      const writer = await createWriter({
+        tone: "formal",
+        length: "short",
+        sharedContext: `You are an AI prompt generator specializing in creating content rating guidelines.`,
       });
 
+      const systemPrompt = await getSystemPrompt().catch(
+        () => fallbackSystemPrompt
+      );
+
       await ensureSession(false, systemPrompt, true);
-
-      const systemPromptMessage = `Follow the example format:
-        **Strictly avoid any adult themes, violence, inappropriate language, or mature content**
-        **Immediately reject requests involving harmful, dangerous, or unsafe activities**
-        **Keep responses educational and family-friendly**
-        **If a topic is inappropriate for children, politely decline to discuss it**
-
-        Generate prompts for Content Moderation Rules for "${filterDescription}": 
-        List four rules in **<moderation rule>** format.
-      `;
 
       try {
         const rules = await withRetry(
           async () => {
-            const systemPromptResponse = await sendMessage(
-              systemPromptMessage,
-              true
+            const systemPrompt = await writer.write(
+              `Generate prompts for Content Moderation Rules for "${filterDescription}": 
+                List four rules in JSON format, key is number, value is rule.
+              `
             );
-            return parseSystemPromptResponse(systemPromptResponse);
+            return Object.values(JSON.parse(systemPrompt)) as string[];
           },
           (result) => result.length > 3
         );
 
         const safetyLevelMessage = `Follow the example format:
           Example:
-          **0-2: No adult content or violence**
-          **3-4: Mild references to adult themes or mild violence (like pushing)**
-          **5-6: Moderate adult content or violence (fighting, mild gore)**
-          **7-8: Strong adult content or violence**
-          **9-10: Extreme adult content or extreme violence**
+          {"0-2": "No adult content or violence",
+          "3-4": "Mild references to adult themes or mild violence (like pushing)",
+          "5-6": "Moderate adult content or violence (fighting, mild gore)",
+          "7-8": "Strong adult content or violence",
+          "9-10": "Extreme adult content or extreme violence"}
 
           Generate prompts for a content rating guideline for "${filterDescription}" on a scale of 0-10.
-          List 5 rating rules in **0-2 rating rule** format.
-          rating rule is short and concise, no need to explain the rule.`;
+          List 5 rating rules in JSON format, key is string like "0-2", "9-10", value is rating guideline.`;
 
         const safetyLevels = await withRetry(
           async () => {
-            const safetyLevelResponse = await sendMessage(
-              safetyLevelMessage,
-              true
+            const safetyLevelResponse = await writer.write(safetyLevelMessage);
+            const parsedResponse = JSON.parse(safetyLevelResponse);
+
+            const hasValidKeys = this.validRanges.every(
+              (range) => range in parsedResponse
             );
-            return parseSafetyLevelResponse(safetyLevelResponse);
+
+            if (!hasValidKeys) {
+              throw new Error(
+                "Invalid safety level ranges. Expected: 0-2, 3-4, 5-6, 7-8, 9-10"
+              );
+            }
+
+            return Object.entries(parsedResponse).map(
+              ([key, value]) => `${key}: ${value}`
+            );
           },
-          (result) => result.length >= 5
+          (result: string[]) => {
+            return (
+              result.length >= 5 &&
+              result.every((rule) =>
+                this.validRanges.some((range) => rule.startsWith(range))
+              )
+            );
+          }
         );
 
         const promptConfig = generatePromptConfig(rules, safetyLevels);
@@ -315,21 +294,9 @@ export class PromptManager {
 
         return promptConfig;
       } catch (error) {
-        console.error("Error details:", {
-          error,
-          type: error instanceof Error ? error.name : typeof error,
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
         throw new Error(`Failed to generate custom prompts: ${error}`);
       }
     } catch (error) {
-      console.error("Error in generateCustomPrompts:", {
-        error,
-        filterDescription,
-        errorType: error instanceof Error ? error.name : typeof error,
-        errorMessage: error instanceof Error ? error.message : String(error),
-      });
       throw error;
     }
   }
