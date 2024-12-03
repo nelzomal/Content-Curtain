@@ -22,10 +22,25 @@ export class UIManager {
   }
 
   showContentWarning(message: string): void {
+    const splitMessage = message
+      .split(/(?<=[.!?]|\d)\s+|(?:explanation:)/i)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0); // Remove empty lines
+
+    console.log("splitMessage", splitMessage);
+
+    if (splitMessage.length > 1) {
+      splitMessage.splice(1, 0, "Explanation:");
+      splitMessage[0] = `<strong>${splitMessage[0]}</strong>`;
+      splitMessage[1] = `<strong>${splitMessage[1]}</strong>`;
+    }
+
+    const remainingMessage = splitMessage.join("\n");
+    console.log("remainingMessage", remainingMessage);
     this.overlay = createBlurOverlay();
     showMessage(this.overlay, {
       title: "Content Warning",
-      message,
+      message: remainingMessage || message,
       titleColor: "#f59e0b",
     });
   }

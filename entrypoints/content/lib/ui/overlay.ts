@@ -61,8 +61,10 @@ export function showMessage(
     ${spinnerHtml}
     <h2 style="color: ${
       options.titleColor || "#e11d48"
-    }; margin-bottom: 12px;">${options.title}</h2>
-    <p style="color: #4b5563;">${options.message}</p>
+    }; margin-bottom: 12px; text-align: left;">${options.title}</h2>
+    <p style="color: #4b5563; white-space: pre-wrap; text-align: left;">${
+      options.message
+    }</p>
   `;
 
   overlay.appendChild(messageBox);
@@ -180,12 +182,21 @@ export const createTooltip = (content: string): HTMLDivElement => {
   const tooltip = document.createElement("div");
   tooltip.className = "tooltip";
 
-  const formattedContent = content
-    .replace(/\n+/g, "\n")
-    .replace(/Rating:/, "Rating: ")
-    .trim();
+  // Format the content using the same logic as showContentWarning
+  const splitContent = content
+    .split(/(?<=[.!?]|\d)\s+|(?:explanation:)/i)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
-  tooltip.textContent = formattedContent;
+  if (splitContent.length > 1) {
+    splitContent.splice(1, 0, "Explanation:");
+    splitContent[0] = `<strong>${splitContent[0]}</strong>`;
+    splitContent[1] = `<strong>${splitContent[1]}</strong>`;
+  }
+
+  const formattedContent = splitContent.join("\n");
+
+  tooltip.innerHTML = formattedContent;
 
   tooltip.style.position = "fixed";
   tooltip.style.display = "none";
