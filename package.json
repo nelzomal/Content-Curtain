@@ -1,8 +1,8 @@
 {
-  "name": "wxt-react-starter",
-  "description": "manifest.json description",
+  "name": "Content Curtain",
+  "description": "Take control of your browsing experience with ContentCurtain! This powerful Chrome extension empowers you to filter and hide sensitive or unwanted text on webpages, creating a more focused and mindful online environment. Whether you’re avoiding sports spoilers, filtering NSFW content, or tailoring web content to your preferences, ContentCurtain lets you customize what you see.",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "wxt",

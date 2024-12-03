@@ -1,16 +1,70 @@
-# Setup Instructions
+# ContentCurtain 🎭
 
-## 1. Install WXT
-Follow the installation guide at [WXT Documentation](https://wxt.dev/guide/installation.html)
+Take control of your browsing experience with ContentCurtain! This powerful Chrome extension empowers you to filter and hide sensitive or unwanted text on webpages, creating a more focused and mindful online environment. Whether you’re avoiding sports spoilers, filtering NSFW content, or tailoring web content to your preferences, ContentCurtain lets you customize what you see.
 
-## 2. Install Tailwind CSS
-Reference implementation available in the [WXT Examples Repository](https://github.com/wxt-dev/examples/tree/main/examples/tailwindcss)
+## Features ✨
 
-## 3. Install shadcn/ui
-Follow these steps:
+- **Smart Content Analysis**: Automatically analyzes webpage content to determine sensitivity levels
+- **Granular Filtering**: Semantically divides content into blocks for precise filtering
+- **Customizable Settings**:
+  - Enable/disable filters
+  - Adjust strictness levels
+  - Create personalized filter types
+- **Real-time Feedback**: Clear notifications about content safety
+- **Privacy-First**: All content analysis happens locally
 
-1. Complete the [manual installation](https://ui.shadcn.com/docs/installation/manual)
-2. Configure the [components.json](https://ui.shadcn.com/docs/components-json)
-3. Add the [Button component](https://ui.shadcn.com/docs/components/button)
-4. Update the `cn.ts` utility
-5. Test the implementation and use AI assistance to resolve any issues
+## How It Works 🔍
+
+ContentCurtain processes webpage content in three ways:
+
+1. **Safe Content**: Displays a notification confirming the page is safe to view
+2. **Sensitive Content**: Shows a full-screen banner explaining why the content may be unsuitable
+3. **Mixed Content**:
+   - Divides content into paragraph blocks
+   - Initially blurs all blocks
+   - Analyzes each block individually
+   - Reveals only blocks meeting user-defined sensitivity criteria
+
+## Installation 🚀
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/yourusername/content-curtain.git
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+3. Build the extension:
+
+   ```bash
+   pnpm build
+   ```
+
+4. Load the extension in Chrome:
+   - Open Chrome and go to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the `dist` directory
+
+## License 📄
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments 🙏
+
+- Built with [WXT](https://wxt.dev)
+- UI components from [Shadcn/UI](https://ui.shadcn.com)
+- Content extraction powered by [Mozilla Readability](https://github.com/mozilla/readability)
+
+## Support 💪
+
+If you find this project useful, please consider giving it a ⭐️ on GitHub!
+
+---
+
+Made with ❤️ for a safer browsing experience
