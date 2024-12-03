@@ -21,7 +21,7 @@ export const SAFETY_LEVEL_PROMPT = `Rate the following text for adult content an
       7-8: Strong adult content or violence
       9-10: Extreme adult content or extreme violence
       
-      Provide the rating and a brief explanation focusing only on adult content and violence levels.
+      Provide the rating and a brief explanation without any details and any adult and violence content.
       Text to analyze: "{{text}}"`;
 
 // Default prompts for different content types
@@ -31,7 +31,7 @@ export const DEFAULT_PROMPTS: Record<PromptType, PromptConfig> = {
     safetyLevelPrompt: SAFETY_LEVEL_PROMPT,
   },
 
-  sportsSpoiler: {
+  "sports spoiler": {
     systemPrompt: `You are an AI assistant specialized in identifying and rating sports-related spoilers. Your main task is to analyze and rate content.
 
       Sports Spoiler Guidelines:
@@ -54,7 +54,7 @@ export const DEFAULT_PROMPTS: Record<PromptType, PromptConfig> = {
       7-8: Significant spoilers (final scores, major plays)
       9-10: Critical spoilers (championship results, major career announcements)
       
-      Provide the rating and a brief explanation focusing only on the level of sports spoilers.
+      Provide the rating and a brief explanation without any details.
 
       Text to analyze: "{{text}}"`,
   },

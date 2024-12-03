@@ -15,7 +15,7 @@ import type { PromptConfig } from "@/entrypoints/content/lib/types";
 
 interface FilterDropdownProps {
   prompts: Record<string, PromptConfig>;
-  activePrompt: string;
+  activePromptType: string;
   disabled?: boolean;
   onSelect: (prompt: PromptConfig) => void;
   onRemove: (name: string) => void;
@@ -23,7 +23,7 @@ interface FilterDropdownProps {
 
 export function FilterDropdown({
   prompts,
-  activePrompt,
+  activePromptType,
   disabled,
   onSelect,
   onRemove,
@@ -54,7 +54,7 @@ export function FilterDropdown({
       <DropdownMenuTrigger disabled={disabled} asChild>
         <Button variant="outline" className="w-[180px] justify-start">
           <Filter className="mr-2 h-4 w-4" />
-          <span>{prompts[activePrompt]?.name || "Select Filter"}</span>
+          <span>{activePromptType || "Select Filter"}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[180px]">
@@ -64,12 +64,12 @@ export function FilterDropdown({
             key={name}
             onClick={() => handleSelect(name, prompt)}
             className={`
-              ${activePrompt === name ? "bg-accent" : ""}
+                ${activePromptType === name ? "bg-accent" : ""}
               group flex justify-between items-center
             `}
           >
             <span>{name}</span>
-            {name !== activePrompt && (
+            {name !== activePromptType && (
               <button
                 onClick={(e) => handleRemove(e, name)}
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded"

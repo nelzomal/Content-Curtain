@@ -128,7 +128,7 @@ function App() {
         <TabsContent value="settings" className="-mt-3">
           <div className="grid grid-cols-1 gap-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Content Analysis</span>
+              <span className="text-sm font-medium">Content Curtain</span>
               <Button
                 onClick={() => updateSettings({ enabled: !isEnabled })}
                 variant={isEnabled ? "default" : "secondary"}
@@ -142,7 +142,7 @@ function App() {
               <span className="text-sm font-medium">Filter Type</span>
               <FilterDropdown
                 prompts={currentPrompts}
-                activePrompt={promptType}
+                activePromptType={promptType}
                 disabled={!isEnabled}
                 onSelect={(prompt) => {
                   updateSettings({ promptType: prompt.name });
@@ -200,7 +200,7 @@ function App() {
                   {strictness === "high" && "Strict content filtering"}
                 </>
               )}
-              {promptType === "sportsSpoiler" && (
+              {promptType === "sports spoiler" && (
                 <>
                   {strictness === "low" && "Only major game results"}
                   {strictness === "medium" && "Game results and key moments"}

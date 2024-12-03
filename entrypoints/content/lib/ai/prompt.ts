@@ -135,12 +135,21 @@ export async function analyzeContentSafety(
     ].safetyLevelPrompt!.replace("{{text}}", text);
 
     const result = await sendMessage(prompt, true);
+    await ensureSession(
+      false,
+      `Don't mention the original content. Don't provide any details. Just provide what kind of the info is leaked.
+      in the following format: "Those info has been leaked: <type of the info>"`,
+      true
+    );
+    const newPrompt = `What kind of the info is leaked? ${result}`;
+    const refinedExplanation = await sendMessage(newPrompt, false);
+
     const safetyNumber = parseInt(result.match(/(\d+)/)?.[0] ?? "0");
 
     const thresholdsMap: ThresholdsMap = {
-      low: { safe: 10, moderate: 10 },
+      low: { safe: 4, moderate: 9 },
       medium: { safe: 2, moderate: 7 },
-      high: { safe: -1, moderate: -1 },
+      high: { safe: 0, moderate: 5 },
     };
 
     const thresholds =
@@ -156,7 +165,7 @@ export async function analyzeContentSafety(
       text,
       safetyNumber,
       safetyLevel,
-      explanation: result,
+      explanation: refinedExplanation,
     };
   } catch (error) {
     throw error;

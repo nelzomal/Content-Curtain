@@ -64,7 +64,7 @@ export interface PromptConfig {
   safetyLevelPrompt: string;
 }
 
-export type PromptType = "nsfw" | "sportSpoiler" | string;
+export type PromptType = "nsfw" | "sports spoiler" | string;
 
 export interface Settings {
   contentAnalysisEnabled: boolean;

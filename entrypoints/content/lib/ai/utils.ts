@@ -123,7 +123,7 @@ function generateSafetyLevelPrompt(safetyLevelPromptRules: string[]): string {
     `Rate the following text for adult content and violence on a scale of 0-10 where:
         ${safetyLevelPromptRules.map((rule) => `**${rule}**`).join("\n")}
     
-        Provide the rating and a brief explanation focusing only on adult content and violence levels.
+        Provide the rating and a brief explanation without any details and any adult and violence content.
         Text to analyze: "{{text}}"`
   );
 }
