@@ -15,16 +15,18 @@ import type { PromptConfig } from "@/entrypoints/content/lib/types";
 
 interface FilterDropdownProps {
   prompts: Record<string, PromptConfig>;
-  onSelect?: (prompt: PromptConfig) => void;
-  onRemove?: (name: string) => void;
-  activePrompt?: string;
+  activePrompt: string;
+  disabled?: boolean;
+  onSelect: (prompt: PromptConfig) => void;
+  onRemove: (name: string) => void;
 }
 
 export function FilterDropdown({
   prompts,
+  activePrompt,
+  disabled,
   onSelect,
   onRemove,
-  activePrompt,
 }: FilterDropdownProps) {
   const handleOpenChange = (open: boolean) => {
     if (open) {
@@ -49,10 +51,10 @@ export function FilterDropdown({
 
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger disabled={disabled} asChild>
         <Button variant="outline" className="w-[180px] justify-start">
           <Filter className="mr-2 h-4 w-4" />
-          <span>{activePrompt || "Select Filter"}</span>
+          <span>{prompts[activePrompt]?.name || "Select Filter"}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[180px]">

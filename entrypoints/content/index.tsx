@@ -29,21 +29,21 @@ let currentSettings: Settings = {
 
 // Load initial settings
 async function initializeSettings() {
-  const contentAnalysisEnabled = storage.defineItem<boolean>(
+  const contentAnalysisEnabled = await storage.getItem<boolean>(
     "local:contentAnalysisEnabled",
     {
       fallback: true,
     }
   );
 
-  const contentStrictness = storage.defineItem<StrictnessLevel>(
+  const contentStrictness = await storage.getItem<StrictnessLevel>(
     "local:contentStrictness",
     {
       fallback: "medium",
     }
   );
   console.log("contentStrictness ", contentStrictness);
-  const activePromptType = storage.defineItem<PromptType>(
+  const activePromptType = await storage.getItem<PromptType>(
     "local:activePromptType",
     {
       fallback: "nsfw",
@@ -51,16 +51,10 @@ async function initializeSettings() {
   );
   console.log("activePromptType ", activePromptType);
 
-  const [enabled, strictness, promptType] = await Promise.all([
-    contentAnalysisEnabled.getValue(),
-    contentStrictness.getValue(),
-    activePromptType.getValue(),
-  ]);
-
   currentSettings = {
-    contentAnalysisEnabled: enabled,
-    contentStrictness: strictness,
-    activePromptType: promptType,
+    contentAnalysisEnabled: contentAnalysisEnabled,
+    contentStrictness: contentStrictness,
+    activePromptType: activePromptType,
     customPrompts: DEFAULT_PROMPTS,
   };
 
@@ -88,6 +82,19 @@ export default defineContentScript({
 
         // Update current settings
         // TODO: update settings
+        await storage.setItem(
+          "local:contentAnalysisEnabled",
+          message.settings.contentAnalysisEnabled
+        );
+        await storage.setItem(
+          "local:contentStrictness",
+          message.settings.contentStrictness
+        );
+        await storage.setItem(
+          "local:activePromptType",
+          message.settings.activePromptType
+        );
+        currentSettings = message.settings;
       }
     });
 

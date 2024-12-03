@@ -39,6 +39,7 @@ function App() {
   // Load initial settings when popup opens
   useEffect(() => {
     Promise.all([settings.getValue()]).then(([settings]) => {
+      console.log("App: ______________\n", settings);
       setIsEnabled(settings.contentAnalysisEnabled);
       setStrictness(settings.contentStrictness);
       setPromptType(settings.activePromptType);
@@ -142,6 +143,7 @@ function App() {
               <FilterDropdown
                 prompts={currentPrompts}
                 activePrompt={promptType}
+                disabled={!isEnabled}
                 onSelect={(prompt) => {
                   updateSettings({ promptType: prompt.name });
                 }}
@@ -211,7 +213,16 @@ function App() {
 
         <TabsContent value="customize" className="pt-1">
           <div>
-            <PromptEditor onSave={handleSavePrompt} />
+            <PromptEditor
+              onSave={(config) => {
+                // existing save logic
+                handleSavePrompt(config);
+              }}
+              onClose={() => {
+                // Switch back to settings tab
+                setActiveTab("settings"); // Assuming you have this state for tab management
+              }}
+            />
           </div>
         </TabsContent>
       </Tabs>

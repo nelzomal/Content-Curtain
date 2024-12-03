@@ -57,6 +57,7 @@ export type StrictnessLevel = "low" | "medium" | "high";
 
 export interface PromptConfig {
   name?: string;
+  label?: string;
   systemPromptRules?: string[];
   systemPrompt: string;
   safetyLevelPromptRules?: string[];

@@ -7,9 +7,10 @@ import { PromptManager } from "@/entrypoints/content/lib/ai/prompt";
 
 interface PromptEditorProps {
   onSave: (config: PromptConfig) => void;
+  onClose?: () => void;
 }
 
-export function PromptEditor({ onSave }: PromptEditorProps) {
+export function PromptEditor({ onSave, onClose }: PromptEditorProps) {
   const [currentView, setCurrentView] = useState<"A" | "B" | "C">("A");
   const [promptName, setPromptName] = useState("");
   const [textA, setTextA] = useState("");
@@ -57,6 +58,15 @@ export function PromptEditor({ onSave }: PromptEditorProps) {
     };
     console.log("handleSave: ______________\n", promptName);
     onSave(config);
+
+    setPromptName("");
+    setTextA("");
+    setTextB("");
+    setTextC("");
+    setCurrentView("A");
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
