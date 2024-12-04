@@ -21,7 +21,8 @@ import {
 import { PromptEditor } from "./components/PromptEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FilterDropdown } from "./components/FilterDropdown";
-import { PromptManager } from "../content/lib/ai/prompt";
+import { checkPromptCapability, PromptManager } from "../content/lib/ai/prompt";
+import { checkWriterCapability } from "../content/lib/ai/write";
 
 // Define storage items
 const settings = storage.defineItem<Settings>("local:settings", {
@@ -35,6 +36,19 @@ function App() {
   const [currentPrompts, setCurrentPrompts] =
     useState<Record<PromptType, PromptConfig>>(DEFAULT_PROMPTS);
   const [activeTab, setActiveTab] = useState("settings");
+  const [canPrompt, setCanPrompt] = useState<boolean | null>(null);
+  const [canWrite, setCanWrite] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkCapability = async () => {
+      const promptResult = await checkPromptCapability();
+
+      setCanPrompt(promptResult);
+      const writerResult = await checkWriterCapability();
+      setCanWrite(writerResult);
+    };
+    checkCapability();
+  }, []);
 
   // Load initial settings when popup opens
   useEffect(() => {
@@ -107,7 +121,7 @@ function App() {
     });
   };
 
-  return (
+  return canPrompt && canWrite ? (
     <div className="min-h-[300px] -mt-2">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 relative">
@@ -226,6 +240,37 @@ function App() {
           </div>
         </TabsContent>
       </Tabs>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-4 items-center justify-center h-full text-center p-4">
+      {!canPrompt && (
+        <p className="text-red-500">
+          The Chrome Prompt AI feature is not enabled. Please{" "}
+          <a
+            href="https://developer.chrome.com/docs/extensions/ai/prompt-api"
+            className="text-blue-500 hover:text-blue-700 underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            click here
+          </a>{" "}
+          to learn how to enable it.
+        </p>
+      )}
+      {!canWrite && (
+        <p className="text-red-500">
+          The Chrome Writer AI feature is not enabled. Please{" "}
+          <a
+            href="https://developer.chrome.com/docs/extensions/ai/"
+            className="text-blue-500 hover:text-blue-700 underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            click here
+          </a>{" "}
+          to learn how to enable it.
+        </p>
+      )}
     </div>
   );
 }

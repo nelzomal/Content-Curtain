@@ -310,3 +310,15 @@ export class PromptManager {
     }
   }
 }
+
+export async function checkPromptCapability(): Promise<boolean> {
+  try {
+    return (await ai.languageModel.capabilities()) !== null;
+  } catch (error) {
+    console.error(
+      "[checkPromptCapability] Language model check failed:",
+      error
+    );
+    return false;
+  }
+}

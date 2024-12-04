@@ -64,3 +64,14 @@ export function destroyRewriter(): void {
     rewriterInstance = null;
   }
 }
+export async function checkWriterCapability(): Promise<boolean> {
+  try {
+    const writer = await createWriter({
+      sharedContext: `test`,
+    });
+    return writer !== null;
+  } catch (error) {
+    console.error("[checkSummarizeCapability] Summarizer check failed:", error);
+    return false;
+  }
+}

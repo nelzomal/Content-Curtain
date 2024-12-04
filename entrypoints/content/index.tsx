@@ -1,6 +1,10 @@
 import { ContentScriptContext } from "wxt/client";
 import "@/assets/global.css";
-import { analyzeContentSafety, destroySession } from "./lib/ai/prompt";
+import {
+  analyzeContentSafety,
+  checkPromptCapability,
+  destroySession,
+} from "./lib/ai/prompt";
 import { UIManager } from "./uiManager";
 import {
   getVisibleTextNodeByWalker,
@@ -13,6 +17,7 @@ import type { StrictnessLevel, PromptType, Settings } from "./lib/types";
 import { PromptManager } from "./lib/ai/prompt";
 import { DEFAULT_PROMPTS } from "./lib/constant";
 import { withRetry } from "./lib/ai/utils";
+import { checkWriterCapability } from "./lib/ai/write";
 
 // Define message type
 interface SettingsMessage {
@@ -72,6 +77,13 @@ export default defineContentScript({
   cssInjectionMode: "ui",
 
   async main(ctx: ContentScriptContext): Promise<any> {
+    const canPrompt = await checkPromptCapability();
+    const canWrite = await checkWriterCapability();
+
+    if (!canPrompt || !canWrite) {
+      return;
+    }
+
     const ui = new UIManager();
 
     await initializeSettings();
