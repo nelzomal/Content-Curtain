@@ -69,7 +69,9 @@ export async function checkWriterCapability(): Promise<boolean> {
     const writer = await createWriter({
       sharedContext: `test`,
     });
-    return writer !== null;
+    const isSuccess = writer !== null;
+    destroyWriter();
+    return isSuccess;
   } catch (error) {
     console.error("[checkSummarizeCapability] Summarizer check failed:", error);
     return false;
