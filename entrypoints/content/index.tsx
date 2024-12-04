@@ -12,6 +12,7 @@ import { storage } from "wxt/storage";
 import type { StrictnessLevel, PromptType, Settings } from "./lib/types";
 import { PromptManager } from "./lib/ai/prompt";
 import { DEFAULT_PROMPTS } from "./lib/constant";
+import { withRetry } from "./lib/ai/utils";
 
 // Define message type
 interface SettingsMessage {
@@ -99,71 +100,75 @@ export default defineContentScript({
     });
 
     try {
-      if (!currentSettings.contentAnalysisEnabled) {
-        return;
-      }
-
-      ui.showProcessing(
-        "Analyzing Content",
-        "Please wait while we analyze your content..."
-      );
-
       const textNodeBlocks = getVisibleTextNodeByWalker();
       const textBlocks = getVisbileTextBlocks(textNodeBlocks);
-      const readableContent = extractReadableContent();
+      if (currentSettings.contentAnalysisEnabled) {
+        ui.showProcessing(
+          "Analyzing Content",
+          "Please wait while we analyze your content..."
+        );
 
-      if (!readableContent) {
-        ui.hideProcessing();
-        ui.showError("Could not extract content from this page");
-        return;
-      }
+        const readableContent = extractReadableContent();
 
-      const promptManager = new PromptManager();
-      await promptManager.initialize();
-
-      const safetyAnalysis = await analyzeContentSafety(
-        readableContent.textContent,
-        {
-          strictness: currentSettings.contentStrictness,
-        }
-      );
-
-      await destroySession();
-      console.log("Safety analysis:", safetyAnalysis);
-      ui.hideProcessing();
-
-      const resultToast = {
-        safe: {
-          message: "✓ Content is safe",
-          type: "success" as const,
-        },
-        moderate: {
-          message: "⚠️ Content contains moderate material",
-          type: "warning" as const,
-        },
-        "too sensitive": {
-          message: "⛔ Content is sensitive",
-          type: "error" as const,
-        },
-      }[safetyAnalysis.safetyLevel!];
-
-      showToast(resultToast);
-
-      switch (safetyAnalysis.safetyLevel) {
-        case "safe":
-          ui.renderApp(ctx, textBlocks, false);
-          break;
-
-        case "moderate":
-          ui.renderApp(ctx, textBlocks, true);
-          break;
-
-        case "too sensitive":
-          ui.showContentWarning(
-            safetyAnalysis.explanation ||
-              "This content has been flagged as sensitive"
-          );
+        if (!readableContent) {
+          ui.hideProcessing();
+          ui.showError("Could not extract content from this page");
           return;
+        }
+
+        const promptManager = new PromptManager();
+        await promptManager.initialize();
+
+        const safetyAnalysis = await withRetry(
+          async () =>
+            await analyzeContentSafety(readableContent.textContent, {
+              strictness: currentSettings.contentStrictness,
+            }),
+          () => {
+            return true;
+          }
+        );
+
+        await destroySession();
+        console.log("Safety analysis:", safetyAnalysis);
+        ui.hideProcessing();
+
+        const resultToast = {
+          safe: {
+            message: "✓ Content is safe",
+            type: "success" as const,
+          },
+          moderate: {
+            message: "⚠️ Content contains moderate material",
+            type: "warning" as const,
+          },
+          "too sensitive": {
+            message: "⛔ Content is sensitive",
+            type: "error" as const,
+          },
+        }[safetyAnalysis.safetyLevel!];
+
+        showToast(resultToast);
+
+        switch (safetyAnalysis.safetyLevel) {
+          case "safe":
+            ui.renderApp(ctx, textBlocks, false);
+            break;
+
+          case "moderate":
+            ui.renderApp(ctx, textBlocks, true);
+            break;
+
+          case "too sensitive":
+            ui.showContentWarning(
+              safetyAnalysis.explanation ||
+                "This content has been flagged as sensitive"
+            );
+
+            return;
+        }
+      } else {
+        ui.renderApp(ctx, textBlocks, true);
       }
     } catch (error) {
       ui.hideProcessing();

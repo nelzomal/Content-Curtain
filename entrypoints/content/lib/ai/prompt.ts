@@ -147,9 +147,9 @@ export async function analyzeContentSafety(
     const safetyNumber = parseInt(result.match(/(\d+)/)?.[0] ?? "0");
 
     const thresholdsMap: ThresholdsMap = {
-      low: { safe: 4, moderate: 9 },
+      low: { safe: 7, moderate: 9 },
       medium: { safe: 2, moderate: 7 },
-      high: { safe: 0, moderate: 5 },
+      high: { safe: 0, moderate: 2 },
     };
 
     const thresholds =

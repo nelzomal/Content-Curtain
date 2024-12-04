@@ -128,7 +128,7 @@ function App() {
         <TabsContent value="settings" className="-mt-3">
           <div className="grid grid-cols-1 gap-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Content Curtain</span>
+              <span className="text-sm font-medium">Full Page Filter</span>
               <Button
                 onClick={() => updateSettings({ enabled: !isEnabled })}
                 variant={isEnabled ? "default" : "secondary"}
@@ -143,7 +143,7 @@ function App() {
               <FilterDropdown
                 prompts={currentPrompts}
                 activePromptType={promptType}
-                disabled={!isEnabled}
+                disabled={false}
                 onSelect={(prompt) => {
                   updateSettings({ promptType: prompt.name });
                 }}
@@ -179,15 +179,15 @@ function App() {
                 onValueChange={(value: StrictnessLevel) =>
                   updateSettings({ strictness: value })
                 }
-                disabled={!isEnabled}
+                disabled={false}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Select strictness" />
                 </SelectTrigger>
                 <SelectContent className="w-[180px]">
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="low">Relexed</SelectItem>
+                  <SelectItem value="medium">Balanced</SelectItem>
+                  <SelectItem value="high">Strict</SelectItem>
                 </SelectContent>
               </Select>
             </div>
