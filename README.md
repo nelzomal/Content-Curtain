@@ -49,7 +49,7 @@ ContentCurtain processes webpage content in three ways:
    - Open Chrome and go to `chrome://extensions/`
    - Enable "Developer mode"
    - Click "Load unpacked"
-   - Select the `dist` directory
+   - Select the `.output/chrome-mv3` directory
 
 ## License 📄
 
